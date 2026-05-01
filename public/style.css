@@ -1,0 +1,112 @@
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Noto Sans Devanagari', 'Poppins', sans-serif; background: #1e2a3a; padding: 20px; color: #1a2332; }
+.container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 28px; overflow: hidden; }
+
+.header { background: linear-gradient(135deg,#001f3d,#003366); color: white; padding: 22px 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.header h1 { font-size: 1.7rem; }
+.header-badge { background: #e67e00; border-radius: 10px; padding: 8px 16px; font-weight: bold; }
+
+.upload-bar { background: #0a3347; padding: 14px 26px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+.btn-up { background: #0e8a5a; color: white; border: none; border-radius: 40px; padding: 10px 24px; cursor: pointer; font-size: 1rem; }
+.btn-up:disabled { opacity: 0.7; cursor: wait; }
+.btn-refresh { background: #135f93; }
+.cloud-intro { display: flex; flex-direction: column; gap: 4px; color: white; max-width: 760px; }
+.cloud-title { font-size: 1rem; font-weight: 700; letter-spacing: 0.02em; }
+.cloud-copy { font-size: 0.92rem; color: rgba(255,255,255,0.82); }
+.cloud-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.status-bar { background: #edf2fb; padding: 9px 26px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.file-status-pill { background: rgba(0,140,60,0.15); color: #004d20; border-radius: 20px; padding: 3px 13px; font-weight: 600; }
+.file-status-pill.loading { background: rgba(20,93,160,0.12); color: #0e4472; }
+.file-status-pill.ok { background: rgba(0,140,60,0.15); color: #004d20; }
+.file-status-pill.err { background: rgba(176,40,32,0.12); color: #7a1111; }
+.status-copy { display: flex; flex-direction: column; gap: 6px; }
+.cloud-meta { color: #4c6480; font-size: 0.84rem; }
+.chips { display: flex; gap: 7px; flex-wrap: wrap; }
+.chip { border-radius: 20px; padding: 3px 12px; background: rgba(0,70,140,0.1); font-size: 0.8rem; }
+.chip.ok { background: rgba(0,130,60,0.18); color: #003d18; }
+.chip.bad { background: rgba(170,0,0,0.12); color: #6a0000; }
+
+.gp-bar { background: #edf2f8; padding: 12px 26px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.gp-bar select { padding: 8px 18px; border-radius: 40px; border: 2px solid #a0bad8; min-width: 240px; font-family: inherit; }
+.gp-count { background: #cfd7e3; color: #18324d; padding: 4px 10px; border-radius: 999px; font-weight: 600; }
+.action-buttons { display: flex; gap: 10px; margin-left: auto; flex-wrap: wrap; }
+.btn-action { border: none; border-radius: 40px; padding: 9px 22px; color: white; cursor: pointer; font-weight: bold; }
+.btn-pdf { background: #1a9450; }
+.btn-print { background: #1a6aaa; }
+.btn-all { background: #b02820; }
+
+.content { padding: 22px 26px; }
+.sec-title { font-size: 1.2rem; font-weight: bold; color: #002d6e; margin: 22px 0 12px; border-left: 6px solid #ff6b35; padding-left: 12px; }
+.sum-row { display: flex; gap: 12px; margin-bottom: 12px; }
+.sum-box { flex: 1; background: #e85d04; border-radius: 16px; padding: 14px; text-align: center; color: white; }
+.sum-box .val { font-size: 2rem; font-weight: bold; }
+.hh-bar { background: #0a5c32; border-radius: 12px; padding: 10px 22px; color: white; display: inline-block; margin-bottom: 12px; }
+.cards { display: grid; grid-template-columns: var(--card-grid, repeat(auto-fit, minmax(100px, 1fr))); gap: 10px; margin-bottom: 18px; }
+.card { background: #1a3c7a; border-radius: 16px; padding: 12px 10px; text-align: center; color: white; min-width: 0; }
+.card .nm { font-size: 0.9rem; font-weight: 700; line-height: 1.15; margin-bottom: 6px; overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+.card .cnt { font-size: 1.6rem; font-weight: bold; line-height: 1.05; }
+.card .sub { font-size: 0.9rem; line-height: 1.1; }
+.no-data { grid-column: 1 / -1; padding: 14px 16px; border-radius: 12px; background: #fff3f0; color: #8c2f16; border: 1px solid #f0b8aa; }
+
+.tbl-wrap { overflow-x: auto; margin: 12px 0; border: 1px solid #c0d4e8; border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+th, td { border: 1px solid #c0d4e8; padding: 8px 6px; text-align: center; vertical-align: middle; }
+th { background: #062840; color: white; font-weight: bold; }
+
+/* 🔥 KRUTIDEV FONT 🔥 */
+.kruti-work-name { font-family: 'Kruti Dev 010', 'DevLys010', 'Mangal', sans-serif !important; font-size: 18px !important; font-weight: bold; text-align: left; }
+
+.tr-dark th { background: #2c3e50; color: white; }
+.tr-mid th { background: #34495e; color: white; }
+.tr-colnum th { background: #e9ecef; color: black; }
+.th-green, .th-yellow, .th-orange, .th-purple, .th-red { background: #e9ecef; color: black; }
+.hg, .hy, .ho { background: #fff3cd; font-weight: bold; }
+.placeholder { text-align: center; padding: 40px; color: #6c757d; }
+
+.pdf-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.pdf-modal-box { background: white; border-radius: 20px; padding: 30px; text-align: center; min-width: 280px; }
+.print-header { display: none; }
+
+@media (max-width: 768px) {
+  body { padding: 12px; }
+  .container { border-radius: 22px; }
+  .header, .upload-bar, .status-bar, .gp-bar, .content { padding-left: 18px; padding-right: 18px; }
+  .cloud-actions, .action-buttons { width: 100%; }
+  .btn-up, .btn-action { width: 100%; }
+  .gp-bar select { min-width: 100%; }
+  .sum-row { flex-wrap: wrap; }
+  .sum-box { min-width: 100%; }
+}
+
+/* 🔥 STRICT 2-PAGE PRINT LAYOUT 🔥 */
+@media print {
+  @page { size: A4 landscape; margin: 8mm; }
+  body { background: white !important; padding: 0 !important; color: black !important; zoom: 90%; }
+  * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+  
+  .upload-bar, .status-bar, .gp-bar, .action-buttons, #debug-panel, .pdf-modal, .header { display: none !important; }
+  .container { border: none !important; border-radius: 0 !important; margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+  
+  .print-header { display: flex !important; justify-content: space-between; padding: 0 10px 5px; border-bottom: 2px solid black; margin-bottom: 10px; font-size: 11pt; font-weight: bold; }
+  
+  /* Shrink elements slightly to guarantee Page 1 fits */
+  .sec-title { margin: 8px 0 4px !important; font-size: 1.1rem !important; }
+  .sum-row { margin-bottom: 6px !important; }
+  .sum-box, .hh-bar, .card { padding: 6px !important; border: 1px solid black !important; background: transparent !important; color: black !important; }
+  .cards { margin-bottom: 8px !important; gap: 6px !important; }
+  .card .nm, .card .sub { color: black !important; }
+  .card .nm { font-size: 0.72rem !important; line-height: 1.05 !important; margin-bottom: 3px !important; }
+  .card .cnt { font-size: 1.15rem !important; }
+  .card .sub { font-size: 0.72rem !important; }
+  
+  table { margin: 6px 0 !important; font-size: 9pt !important; border: 1px solid black !important; }
+  th, td { padding: 4px !important; border: 1px solid black !important; }
+  th { background: #f0f0f0 !important; color: black !important; }
+  
+  #s1, #s2 { page-break-inside: avoid !important; }
+  #s3 { page-break-inside: auto !important; }
+  #s4 { page-break-before: always !important; margin-top: 15px; }
+  
+  .tbl-wrap { overflow: visible !important; border: none !important; }
+  .kruti-work-name { font-size: 16pt !important; }
+}

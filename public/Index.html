@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>स्वच्छ भारत मिशन (ग्रामीण) | GP विस्तृत रिपोर्ट</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="print-header">
+  <div class="print-gp-name"></div>
+  <div class="print-title">Swachh Bharat Mission (Gramin)</div>
+  <div class="print-timestamp"></div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>स्वच्छ भारत मिशन (ग्रामीण)</h1>
+      <p>पंचायत समिति देवगढ़, जिला राजसमन्द (राजस्थान) | GP-वार समेकित विश्लेषण</p>
+    </div>
+    <div class="header-badge">SBM-G</div>
+  </div>
+
+  <div class="upload-bar">
+    <div class="cloud-intro">
+      <span class="cloud-title">☁️ Secure OneDrive Sync</span>
+      <span class="cloud-copy">Workbook browser me link dikhaye bina server-side protected OneDrive source se load hota hai.</span>
+    </div>
+    <div class="cloud-actions">
+      <button class="btn-up" id="btnFetch" onclick="syncCloudData()">☁️ डेटा लोड करें</button>
+      <button class="btn-up btn-refresh" id="btnRefresh" onclick="syncCloudData(true)">↻ ताज़ा सिंक</button>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-copy">
+      <span id="file-status" class="file-status-pill">☁️ Secure OneDrive sync की प्रतीक्षा...</span>
+      <span id="cloud-meta" class="cloud-meta">Server-side protected source active</span>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="debug-panel" style="display:none; background:#f4f8ff; padding:10px; border-top:1px solid #ccc;">
+    <div onclick="toggleDebug()" style="cursor:pointer; font-weight:bold;">🔍 Debug Panel ▼</div>
+    <div id="dbg-body" style="display:none; max-height:300px; overflow:auto;"></div>
+  </div>
+
+  <div class="gp-bar">
+    <label>📌 ग्राम पंचायत :</label>
+    <select id="gpsel" onchange="DataHandler.renderAll()">
+      <option value="">-- GP चुनें --</option>
+    </select>
+    <span id="gp-count" class="gp-count"></span>
+    <div class="action-buttons">
+      <button class="btn-action btn-pdf" onclick="exportCurrentGP()">📄 PDF (Landscape)</button>
+      <button class="btn-action btn-print" onclick="window.print()">🖨️ Print</button>
+      <button class="btn-action btn-all" onclick="exportAllGPs()">📑 सभी GP — PDF</button>
+    </div>
+  </div>
+
+  <div class="content" id="mc">
+    <div class="placeholder" id="placeholder-msg">
+      <div>📊</div>
+      <p>Secure OneDrive source से डेटा sync होते ही रिपोर्ट दिखेगी</p>
+      <div style="margin-top:10px; font-size:0.8rem;">आवश्यक Sheets: census, Ration HH, All IHHL Data, CSC Status</div>
+    </div>
+  </div>
+</div>
+
+<div id="pdfModal" style="display:none;" class="pdf-modal">
+  <div class="pdf-modal-box">
+    <div style="font-size:2rem;">📄</div>
+    <div id="pdfModalTitle" style="font-weight:bold; margin-top:10px;">PDF तैयार हो रही है…</div>
+    <div style="height:6px; background:#ddd; margin:10px 0; border-radius:4px; overflow:hidden;"><div id="pdfProgressBar" style="width:0%; height:100%; background:#1a9450;"></div></div>
+    <div id="pdfModalSub" style="color:#666;">कृपया प्रतीक्षा करें…</div>
+  </div>
+</div>
+
+<script src="data-handler.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
