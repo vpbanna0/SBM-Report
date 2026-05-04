@@ -27,8 +27,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies (skip Puppeteer download)
-        run: |
-          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install
+       run: npm install xlsx node-fetch dotenv --ignore-scripts
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
 
