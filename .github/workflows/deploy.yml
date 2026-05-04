@@ -26,10 +26,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies (skip Puppeteer download)
-       run: npm install xlsx node-fetch dotenv
-        env:
-          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
+      - name: Install dependencies
+        run: npm install xlsx node-fetch dotenv
 
       - name: Build static data snapshot
         run: node scripts/build-static-data.js
