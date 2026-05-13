@@ -258,7 +258,6 @@
         
         doc.addImage(imgData, 'JPEG', xOffset, yOffset, finalWidth, finalHeight, undefined, 'FAST');
         
-        // ✅ Fixed date format — manual, no locale cut-off issue
         const now = new Date();
         const day = String(now.getDate()).padStart(2,'0');
         const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
@@ -269,33 +268,27 @@
         const mi  = String(now.getMinutes()).padStart(2,'0');
         const dateTime = `${day}-${mon}-${yr}  ${hr}:${mi} ${ap}`;
 
-        // ✅ Header separator line
         doc.setDrawColor(0, 0, 0);
         doc.setLineWidth(0.4);
         doc.line(margin, margin + 3, pageWidth - margin, margin + 3);
 
-        // ✅ GP name — left aligned
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
         doc.text(`GP: ${gp}`, margin, margin);
 
-        // ✅ Title — center, every page (not just first)
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
         doc.text('Swachh Bharat Mission (Gramin) Pragati Report', pageWidth / 2, margin, { align: 'center' });
 
-        // ✅ Date — right aligned using align option (no manual width calc)
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.text(dateTime, pageWidth - margin, margin, { align: 'right' });
 
-        // ✅ Footer separator line
         doc.setDrawColor(0, 0, 0);
         doc.setLineWidth(0.4);
         doc.line(margin, pageHeight - margin + 1, pageWidth - margin, pageHeight - margin + 1);
 
-        // ✅ Footer page number — center aligned using align option
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth / 2, pageHeight - margin + 5, { align: 'center' });
@@ -305,7 +298,7 @@
       doc.addPage();
       addImageToDoc(canvas2, false, 2, 2);
       
-      doc.save(`SBM_Report_${gp}.pdf`);
+      doc.save(`SBM Report ${gp}.pdf`);
       showModal(false);
     } catch(err) {
       console.error(err);
@@ -314,51 +307,52 @@
     }
   };
 
+  // ✅ GP-WISE ALAG ALAG PDF DOWNLOAD
   window.exportAllGPs = async function() {
     const sel = document.getElementById('gpsel');
     const options = Array.from(sel.options).filter(opt => opt.value !== '');
     if (options.length === 0) { alert('कोई GP उपलब्ध नहीं है।'); return; }
     showModal(true, 0, 'सभी GP के लिए PDF बन रहा है…', 'कृपया प्रतीक्षा करें…');
     const { jsPDF } = window.jspdf;
-    let combinedDoc = null;
-    let isFirst = true;
-    for (let i=0; i<options.length; i++) {
+
+    for (let i = 0; i < options.length; i++) {
       const gp = options[i].value;
       sel.value = gp;
       DataHandler.renderAll();
       await new Promise(r => setTimeout(r, 400));
-      
+
       const s1 = document.getElementById('s1'); const s2 = document.getElementById('s2');
       const s3 = document.getElementById('s3'); const s4 = document.getElementById('s4');
       if (!s1 || !s2 || !s3 || !s4) continue;
-      
+
       const page1Div = document.createElement('div');
-      page1Div.appendChild(s1.cloneNode(true)); page1Div.appendChild(s2.cloneNode(true)); page1Div.appendChild(s3.cloneNode(true));
+      page1Div.appendChild(s1.cloneNode(true));
+      page1Div.appendChild(s2.cloneNode(true));
+      page1Div.appendChild(s3.cloneNode(true));
       const canvas1 = await captureElementSafely(page1Div, 2);
-      
+
       const page2Div = document.createElement('div');
       page2Div.appendChild(s4.cloneNode(true));
       const canvas2 = await captureElementSafely(page2Div, 2);
-      
+
       if (!canvas1 || !canvas2) continue;
-      
-      if (isFirst) { combinedDoc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }); isFirst = false; } 
-      else { combinedDoc.addPage(); }
-      
-      const pageWidth = combinedDoc.internal.pageSize.getWidth();
-      const pageHeight = combinedDoc.internal.pageSize.getHeight();
-      const margin = 14; const imgWidth = pageWidth - 2 * margin;
-      
-      const addImg = (canvas, isFirstPage, pageNum) => {
+
+      // ✅ Har GP ke liye bilkul ALAG PDF document
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 14;
+      const imgWidth = pageWidth - 2 * margin;
+
+      const addImg = (canvas, pageNum) => {
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         const finalHeight = Math.min(imgHeight, pageHeight - 32);
         const finalWidth = (canvas.width * finalHeight) / canvas.height;
         const xOffset = (pageWidth - finalWidth) / 2;
-        
-        combinedDoc.addImage(imgData, 'JPEG', xOffset, margin + 10, finalWidth, finalHeight, undefined, 'FAST');
-        
-        // ✅ Fixed date format — manual, no locale cut-off issue
+
+        doc.addImage(imgData, 'JPEG', xOffset, margin + 10, finalWidth, finalHeight, undefined, 'FAST');
+
         const now = new Date();
         const day = String(now.getDate()).padStart(2,'0');
         const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
@@ -369,48 +363,39 @@
         const mi  = String(now.getMinutes()).padStart(2,'0');
         const dateTime = `${day}-${mon}-${yr}  ${hr}:${mi} ${ap}`;
 
-        // ✅ Header separator line
-        combinedDoc.setDrawColor(0, 0, 0);
-        combinedDoc.setLineWidth(0.4);
-        combinedDoc.line(margin, margin + 3, pageWidth - margin, margin + 3);
+        doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.4);
+        doc.line(margin, margin + 3, pageWidth - margin, margin + 3);
 
-        // ✅ GP name — left
-        combinedDoc.setFont('helvetica', 'normal');
-        combinedDoc.setFontSize(10);
-        combinedDoc.setTextColor(0, 0, 0);
-        combinedDoc.text(`GP: ${gp}`, margin, margin);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(0, 0, 0);
+        doc.text(`GP: ${gp}`, margin, margin);
 
-        // ✅ Title — center, every page
-        combinedDoc.setFont('helvetica', 'bold');
-        combinedDoc.setFontSize(11);
-        combinedDoc.text('Swachh Bharat Mission (Gramin) Pragati Report', pageWidth / 2, margin, { align: 'center' });
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.text('Swachh Bharat Mission (Gramin) Pragati Report', pageWidth / 2, margin, { align: 'center' });
 
-        // ✅ Date — right aligned using align option (no manual width calc)
-        combinedDoc.setFont('helvetica', 'normal');
-        combinedDoc.setFontSize(10);
-        combinedDoc.text(dateTime, pageWidth - margin, margin, { align: 'right' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+        doc.text(dateTime, pageWidth - margin, margin, { align: 'right' });
 
-        // ✅ Footer separator line
-        combinedDoc.setDrawColor(0, 0, 0);
-        combinedDoc.setLineWidth(0.4);
-        combinedDoc.line(margin, pageHeight - margin + 1, pageWidth - margin, pageHeight - margin + 1);
+        doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.4);
+        doc.line(margin, pageHeight - margin + 1, pageWidth - margin, pageHeight - margin + 1);
 
-        // ✅ Footer page number — center
-        combinedDoc.setFont('helvetica', 'normal');
-        combinedDoc.setFontSize(9);
-        combinedDoc.text(`Page ${pageNum} of 2`, pageWidth / 2, pageHeight - margin + 5, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+        doc.text(`Page ${pageNum} of 2`, pageWidth / 2, pageHeight - margin + 5, { align: 'center' });
       };
-      
-      addImg(canvas1, true, 1);
-      combinedDoc.addPage();
-      addImg(canvas2, false, 2);
-      showModal(true, Math.round(((i+1)/options.length)*100), `PDF बन रहा है... (${i+1}/${options.length})`, `GP: ${gp}`);
-    }
-    if (combinedDoc) {
-      combinedDoc.save(`SBM_Report_All_GPs_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.pdf`);
+
+      addImg(canvas1, 1);
+      doc.addPage();
+      addImg(canvas2, 2);
+
+      // ✅ File naam: "SBM Report Anjna.pdf", "SBM Report Bhatpura.pdf" etc.
+      doc.save(`SBM Report ${gp}.pdf`);
+
+      showModal(true, Math.round(((i + 1) / options.length) * 100), `PDF बन रहा है... (${i + 1}/${options.length})`, `GP: ${gp}`);
+
+      // Browser ko thoda breathe karne do
+      await new Promise(r => setTimeout(r, 200));
     }
     showModal(false);
-  }
+  };
 
   window.renderAll = function() { DataHandler.renderAll(); };
   window.toggleDebug = function() {
