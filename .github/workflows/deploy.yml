@@ -27,7 +27,10 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install xlsx node-fetch dotenv
+        run: npm install
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
+          PUPPETEER_SKIP_DOWNLOAD: true
 
       - name: Build static data snapshot
         run: node scripts/build-static-data.js
