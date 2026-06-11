@@ -305,21 +305,21 @@ const CSC_COLS=[
     aliases:['work name','name of work','कार्य का नाम','कार्य नाम'],
     tokenSets:[['work','name'],['name','work'],['कार्य','नाम']],
     width:'200px',
-    cls:'kruti-work-name'
+    cls:'hindi-unicode'
   },
   {
     label:'Work Status',
     aliases:['work status','status of work','कार्य स्थिति','कार्य की स्थिति'],
     tokenSets:[['work','status'],['status','work'],['कार्य','स्थिति']],
     width:'95px',
-    cls:'csc-status'
+    cls:'hindi-unicode csc-status'
   },
   {
     label:'Geo Tag Status',
     aliases:['geo tag status','geo tagging status','geotag status','geo tag','geo tagging','जियो टैग स्थिति','जियो टैग'],
     tokenSets:[['geo','tag'],['geo','tagging'],['जियो','टैग']],
     width:'92px',
-    cls:'csc-geo'
+    cls:'hindi-unicode csc-geo'
   },
   {
     label:'SBM Amount',
