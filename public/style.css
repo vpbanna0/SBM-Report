@@ -34,6 +34,7 @@ body { font-family: 'Noto Sans Devanagari', 'Poppins', sans-serif; background: #
 .btn-pdf { background: #1a9450; }
 .btn-print { background: #1a6aaa; }
 .btn-all { background: #b02820; }
+.btn-block { background: #6c3483; }
 
 .content { padding: 22px 26px; }
 .sec-title { font-size: 1.2rem; font-weight: bold; color: #002d6e; margin: 22px 0 12px; border-left: 6px solid #ff6b35; padding-left: 12px; }
