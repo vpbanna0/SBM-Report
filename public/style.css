@@ -53,8 +53,9 @@ table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 th, td { border: 1px solid #c0d4e8; padding: 8px 6px; text-align: center; vertical-align: middle; }
 th { background: #062840; color: white; font-weight: bold; }
 
-/* 🔥 KRUTIDEV FONT 🔥 */
-.kruti-work-name { font-family: 'Kruti Dev 010', 'DevLys010', 'Mangal', sans-serif !important; font-size: 18px !important; font-weight: bold; text-align: left; }
+/* ✅ UNICODE HINDI FONT */
+.hindi-unicode { font-family: 'Noto Sans Devanagari', 'Mangal', 'Nirmala UI', Arial, sans-serif !important; font-size: 13px !important; }
+.kruti-work-name { font-family: 'Noto Sans Devanagari', 'Mangal', 'Nirmala UI', Arial, sans-serif !important; font-size: 13px !important; }
 
 .tr-dark th { background: #2c3e50; color: white; }
 .tr-mid th { background: #34495e; color: white; }
@@ -108,5 +109,5 @@ th { background: #062840; color: white; font-weight: bold; }
   #s4 { page-break-before: always !important; margin-top: 15px; }
   
   .tbl-wrap { overflow: visible !important; border: none !important; }
-  .kruti-work-name { font-size: 16pt !important; }
+  .hindi-unicode, .kruti-work-name { font-family: 'Noto Sans Devanagari', 'Mangal', 'Nirmala UI', Arial, sans-serif !important; font-size: 10pt !important; }
 }
