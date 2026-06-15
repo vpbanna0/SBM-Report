@@ -188,16 +188,8 @@ function parseWorkbookBuffer(buffer) {
     sheetNames.push(name);
   };
 
-  const exactImis = workbook.SheetNames.find((name) => name.trim().toLowerCase() === 'all ihhl data');
-  if (exactImis) {
-    addSheet(exactImis);
-  } else {
-    addSheet(workbook.SheetNames.find((name) => ACCEPT.imis.includes(name.trim().toLowerCase())));
-  }
-
-  ['census', 'ration', 'csc'].forEach((key) => {
-    addSheet(workbook.SheetNames.find((name) => ACCEPT[key].includes(name.trim().toLowerCase())));
-  });
+  // ✅ SAARI SHEETS SAVE KARO (GP Report + Block Report dono ke liye)
+  workbook.SheetNames.forEach((name) => addSheet(name));
 
   return { sheets, sheetNames };
 }
