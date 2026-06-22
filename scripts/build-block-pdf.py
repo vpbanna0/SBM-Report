@@ -7,7 +7,6 @@ import os, sys, subprocess, tempfile, shutil, struct, zlib
 from pathlib import Path
 
 # ── pip install ──
-subprocess.run([sys.executable,'-m','pip','install','requests','openpyxl','--quiet'], check=True)
 import requests, openpyxl
 from openpyxl import load_workbook
 
