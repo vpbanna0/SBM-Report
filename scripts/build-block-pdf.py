@@ -1,9 +1,10 @@
 """
 build-block-pdf.py
-Excel file ko download karke LibreOffice se PDF banata hai
-Bilkul VBA ke ExportAsFixedFormat jaisa output
+LibreOffice UNO automation se directly Excel sheets select karke
+PDF export karta hai — bilkul VBA macro jaisa (file ko touch/resave
+nahi karta, isliye formatting 100% Excel jaisi rehti hai)
 """
-import os, sys, subprocess, tempfile, shutil, base64, re
+import os, sys, subprocess, tempfile, shutil, base64, re, time
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
@@ -15,6 +16,7 @@ PUBLIC_DIR   = Path(__file__).parent.parent / 'public'
 DATA_DIR     = PUBLIC_DIR / 'data'
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+# VBA macro waali sheets — exact same order/names
 TARGET_SHEETS = [
     'Summary', 'ODF Plus', 'CSC 23-24', 'CSC 24-25', 'CSC 25-26',
     'RRC Updated (4)', 'All IHHL Data Combine', 'Tender Report 25-26',
@@ -26,6 +28,8 @@ HEADERS = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
 }
+
+SOFFICE_PORT = 2002
 
 
 # ══════════════════════════════════════════════
@@ -69,7 +73,6 @@ def extract_signed_download_url(preview_html):
     return normalized if normalized.startswith('http') else f'https://{normalized}'
 
 def is_valid_zip(data):
-    """Excel files (.xlsx) ek zip hote hain - PK header check karo"""
     return len(data) > 4 and data[:2] == b'PK'
 
 def download_excel(url):
@@ -77,7 +80,6 @@ def download_excel(url):
     sharing_url = resolve_onedrive_share_url(url)
     session = requests.Session()
 
-    # Method 1: OneDrive API
     try:
         b64 = base64.b64encode(sharing_url.encode()).decode().rstrip('=').replace('+', '-').replace('/', '_')
         api_url = f"https://api.onedrive.com/v1.0/shares/u!{b64}/root/content"
@@ -85,12 +87,10 @@ def download_excel(url):
         if r.ok and is_valid_zip(r.content):
             print("✅ Downloaded via OneDrive API")
             return r.content
-        else:
-            print(f"⚠️ API method gave invalid file (status {r.status_code}, size {len(r.content)})")
+        print(f"⚠️ API method gave invalid file (status {r.status_code}, size {len(r.content)})")
     except Exception as e:
         print(f"⚠️ OneDrive API failed: {e}")
 
-    # Method 2: Preview HTML scraping (signed download URL)
     try:
         preview_html = fetch_preview_html(url, session)
         signed_url = extract_signed_download_url(preview_html)
@@ -98,12 +98,10 @@ def download_excel(url):
         if r.ok and is_valid_zip(r.content):
             print("✅ Downloaded via preview scraping")
             return r.content
-        else:
-            print(f"⚠️ Preview method gave invalid file (status {r.status_code}, size {len(r.content)})")
+        print(f"⚠️ Preview method gave invalid file (status {r.status_code}, size {len(r.content)})")
     except Exception as e:
         print(f"⚠️ Preview download failed: {e}")
 
-    # Method 3: Generic redirect with download param
     try:
         r = session.get(sharing_url, headers=HEADERS, allow_redirects=True, timeout=60)
         final_url = r.url
@@ -116,69 +114,117 @@ def download_excel(url):
         if r2.ok and 'login.live.com' not in r2.url and is_valid_zip(r2.content):
             print("✅ Downloaded via redirect method")
             return r2.content
-        else:
-            print(f"⚠️ Redirect method gave invalid file (status {r2.status_code}, size {len(r2.content)})")
+        print(f"⚠️ Redirect method gave invalid file (status {r2.status_code}, size {len(r2.content)})")
     except Exception as e:
         print(f"⚠️ Generic download failed: {e}")
 
     raise Exception("OneDrive se valid Excel file download nahi ho saki. Share link check karein.")
 
 
-# ══════════════════════════════════════════════
-#  PDF NAAM + SHEET FILTER
-# ══════════════════════════════════════════════
-
-def get_pdf_name(wb):
-    for sname in wb.sheetnames:
-        if 'sheet_index' in sname.lower() or 'sheetindex' in sname.lower():
-            try:
-                val = wb[sname]['I2'].value
-                if val:
-                    return str(val).strip()
-            except Exception:
-                pass
-    return 'Block_SBM_Report'
-
-def hide_other_sheets(wb, keep_sheets):
-    visible_names = []
-    for name in wb.sheetnames:
-        ws = wb[name]
-        matched = any(name.strip().lower() == t.strip().lower() for t in keep_sheets)
-        if matched:
-            ws.sheet_state = 'visible'
-            visible_names.append(name)
-        else:
-            try:
-                ws.sheet_state = 'hidden'
-            except Exception:
-                pass
-    print(f"📋 Visible sheets: {visible_names}")
-    return visible_names
+def get_pdf_name(xlsx_path):
+    """Sirf naam padhne ke liye read-only open - original file ko touch nahi karta"""
+    wb = load_workbook(xlsx_path, read_only=True, data_only=True)
+    try:
+        for sname in wb.sheetnames:
+            if 'sheet_index' in sname.lower() or 'sheetindex' in sname.lower():
+                try:
+                    val = wb[sname]['I2'].value
+                    if val:
+                        return str(val).strip()
+                except Exception:
+                    pass
+        return 'Block_SBM_Report'
+    finally:
+        wb.close()
 
 
 # ══════════════════════════════════════════════
-#  LIBREOFFICE CONVERT
+#  LIBREOFFICE UNO AUTOMATION
+#  (VBA jaisa selection-based export — file resave nahi hota)
 # ══════════════════════════════════════════════
 
-def convert_to_pdf(xlsx_path, pdf_path):
-    out_dir = pdf_path.parent
-    print("🔄 LibreOffice se PDF convert ho raha hai...")
-    result = subprocess.run([
-        'libreoffice', '--headless', '--norestore', '--nofirststartwizard',
-        '--convert-to', 'pdf',
-        '--outdir', str(out_dir),
-        str(xlsx_path)
-    ], capture_output=True, text=True, timeout=180)
-    print(result.stdout)
-    if result.returncode != 0:
-        print(result.stderr)
-        raise Exception(f"LibreOffice failed: {result.stderr}")
-    generated = out_dir / (xlsx_path.stem + '.pdf')
-    if generated.exists():
-        shutil.move(str(generated), str(pdf_path))
-        print(f"✅ PDF saved: {pdf_path}")
-    else:
-        raise Exception(f"PDF file nahi mili: {generated}")
+def start_soffice(profile_dir):
+    return subprocess.Popen([
+        'soffice', '--headless', '--invisible', '--nocrashreport',
+        '--nodefault', '--norestore', '--nologo', '--nofirststartwizard',
+        f'--env:UserInstallation=file://{profile_dir}',
+        f'--accept=socket,host=localhost,port={SOFFICE_PORT};urp;'
+    ])
+
+def connect_uno(retries=40):
+    import uno
+    local_ctx = uno.getComponentContext()
+    resolver = local_ctx.ServiceManager.createInstanceWithContext(
+        "com.sun.star.bridge.UnoUrlResolver", local_ctx)
+    last_err = None
+    for _ in range(retries):
+        try:
+            ctx = resolver.resolve(
+                f"uno:socket,host=localhost,port={SOFFICE_PORT};urp;StarOffice.ComponentContext")
+            return ctx
+        except Exception as e:
+            last_err = e
+            time.sleep(0.5)
+    raise Exception(f"LibreOffice se connect nahi hua: {last_err}")
+
+def make_prop(name, value):
+    from com.sun.star.beans import PropertyValue
+    p = PropertyValue()
+    p.Name = name
+    p.Value = value
+    return p
+
+def export_selected_sheets_pdf(xlsx_path, pdf_path, target_sheets):
+    profile_dir = tempfile.mkdtemp(prefix='lo_profile_')
+    proc = start_soffice(profile_dir)
+    try:
+        ctx = connect_uno()
+        smgr = ctx.ServiceManager
+        desktop = smgr.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
+
+        url = "file://" + os.path.abspath(str(xlsx_path))
+        load_props = (
+            make_prop("Hidden", True),
+            make_prop("ReadOnly", True),
+            make_prop("MacroExecutionMode", 0),   # VBA macro accidentally run na ho
+        )
+        doc = desktop.loadComponentFromURL(url, "_blank", 0, load_props)
+
+        sheets = doc.Sheets
+        all_names = list(sheets.ElementNames)
+        target_lower = [t.strip().lower() for t in target_sheets]
+
+        # Actual workbook tab-order mein matched sheets (VBA jaisa hi behaviour)
+        ordered_matched = [n for n in all_names if n.strip().lower() in target_lower]
+        print(f"📋 Matched sheets (tab order): {ordered_matched}")
+
+        if not ordered_matched:
+            print("⚠️ Koi target sheet nahi mili — saari sheets export ho rahi hain")
+            ordered_matched = all_names
+
+        sheet_objs = tuple(sheets.getByName(n) for n in ordered_matched)
+
+        controller = doc.CurrentController
+        controller.select(sheet_objs)
+        selection = controller.getSelection()
+
+        export_props = (
+            make_prop("FilterName", "calc_pdf_Export"),
+            make_prop("FilterData", (make_prop("Selection", selection),)),
+        )
+
+        out_url = "file://" + os.path.abspath(str(pdf_path))
+        doc.storeToURL(out_url, export_props)
+        doc.close(False)
+        print(f"✅ PDF exported: {pdf_path}")
+
+    finally:
+        try:
+            proc.terminate()
+            proc.wait(timeout=10)
+        except Exception:
+            proc.kill()
+        shutil.rmtree(profile_dir, ignore_errors=True)
 
 
 # ══════════════════════════════════════════════
@@ -193,32 +239,22 @@ def main():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         xlsx_path = tmp / 'workbook.xlsx'
-        filtered_path = tmp / 'block_report.xlsx'
 
         data = download_excel(ONEDRIVE_URL)
         xlsx_path.write_bytes(data)
         print(f"📦 File size: {len(data) // 1024} KB")
 
-        wb = load_workbook(xlsx_path, read_only=True, data_only=True)
-        pdf_name = get_pdf_name(wb)
-        wb.close()
+        pdf_name = get_pdf_name(xlsx_path)
         print(f"📄 PDF naam: {pdf_name}")
 
-        wb2 = load_workbook(xlsx_path, data_only=True)
-        visible = hide_other_sheets(wb2, TARGET_SHEETS)
-        if not visible:
-            print("⚠️ Koi matching sheet nahi mili, saari sheets rakh rahe hain")
-            for name in wb2.sheetnames:
-                wb2[name].sheet_state = 'visible'
-        wb2.save(str(filtered_path))
-        wb2.close()
+        pdf_out = tmp / 'output.pdf'
+        export_selected_sheets_pdf(xlsx_path, pdf_out, TARGET_SHEETS)
 
-        pdf_out = DATA_DIR / f"{pdf_name}.pdf"
-        convert_to_pdf(filtered_path, pdf_out)
-
+        final_pdf = DATA_DIR / f"{pdf_name}.pdf"
+        shutil.copy(str(pdf_out), str(final_pdf))
         shutil.copy(str(pdf_out), str(DATA_DIR / 'block-report.pdf'))
         (DATA_DIR / 'block-pdf-name.txt').write_text(pdf_name)
-        print(f"🎉 Done! PDF: {pdf_out.name}")
+        print(f"🎉 Done! PDF: {final_pdf.name}")
 
 
 if __name__ == '__main__':
