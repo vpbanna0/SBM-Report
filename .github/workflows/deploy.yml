@@ -5,7 +5,7 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: '30 2 * * *'   # Har roz 8:00 AM IST
+    - cron: '30 2 * * *'
 
 permissions:
   contents: read
@@ -28,14 +28,25 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
+      - name: Install LibreOffice
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libreoffice libreoffice-calc --no-install-recommends
+          libreoffice --version
+
+      - name: Install Node dependencies
         run: npm install
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
           PUPPETEER_SKIP_DOWNLOAD: true
 
-      - name: Build static data snapshot
+      - name: Build GP Report static data (workbook.json)
         run: node scripts/build-static-data.js
+        env:
+          ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
+
+      - name: Build Block Report PDF (LibreOffice)
+        run: python3 scripts/build-block-pdf.py
         env:
           ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
 
