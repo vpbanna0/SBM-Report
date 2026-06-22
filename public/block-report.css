@@ -170,3 +170,40 @@ tr:hover td { background: #e8f0f8; }
   .report-content { padding: 16px; }
   .sheet-tabs { padding: 0 12px; }
 }
+
+/* ── PREVIEW AREA ── */
+.preview-area {
+  min-height: calc(100vh - 120px);
+  background: #1e2a3a;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 20px;
+}
+.preview-card {
+  background: white; border-radius: 24px;
+  padding: 48px 40px; text-align: center;
+  max-width: 600px; width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.preview-icon { font-size: 4rem; margin-bottom: 16px; }
+.preview-title { font-size: 1.5rem; font-weight: 700; color: #002d6e; margin-bottom: 8px; }
+.preview-sub   { color: #6c757d; margin-bottom: 24px; font-size: 0.95rem; }
+
+.preview-sheets {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  justify-content: center; margin-bottom: 32px;
+}
+.sheet-tag {
+  background: #edf2fb; color: #0a3a6a;
+  border-radius: 20px; padding: 4px 14px;
+  font-size: 0.82rem; font-weight: 600;
+}
+
+.btn-download {
+  background: #1a9450; color: white;
+  border: none; border-radius: 40px;
+  padding: 14px 40px; font-size: 1.1rem;
+  font-weight: 700; cursor: pointer;
+  transition: opacity 0.2s; width: 100%;
+}
+.btn-download:disabled { background: #8a9bb0; cursor: not-allowed; }
+.btn-download:not(:disabled):hover { opacity: 0.88; }
