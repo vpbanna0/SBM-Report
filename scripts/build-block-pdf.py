@@ -145,13 +145,15 @@ def get_pdf_name(xlsx_path):
 
 def start_soffice(profile_dir):
     profile_uri = Path(profile_dir).resolve().as_uri()
+    env = os.environ.copy()
+    env['SAL_USE_VCLPLUGIN'] = 'svp'   # X11/display ki zaroorat nahi - pure headless rendering
+    env['HOME'] = profile_dir           # kuch font/config cache yahi dhundta hai
     return subprocess.Popen([
-        'xvfb-run', '--auto-servernum', '--server-args=-screen 0 1280x1024x24',
         'soffice', '--headless', '--invisible', '--nocrashreport',
         '--nodefault', '--norestore', '--nologo', '--nofirststartwizard',
         f'-env:UserInstallation={profile_uri}',
         f'--accept=socket,host=localhost,port={SOFFICE_PORT};urp;'
-    ])
+    ], env=env)
 
 def connect_uno(retries=90, soffice_proc=None):
     import uno
