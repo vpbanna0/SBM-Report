@@ -59,9 +59,11 @@ jobs:
           ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
 
       - name: Build Block Report PDF (LibreOffice UNO)
-        run: python3 scripts/build-block-pdf.py
+        timeout-minutes: 5
+        run: python3 -u scripts/build-block-pdf.py
         env:
           ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
+          PYTHONUNBUFFERED: "1"
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
