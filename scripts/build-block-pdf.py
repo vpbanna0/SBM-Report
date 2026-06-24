@@ -146,26 +146,32 @@ def get_pdf_name(xlsx_path):
 def start_soffice(profile_dir):
     profile_uri = Path(profile_dir).resolve().as_uri()
     return subprocess.Popen([
+        'xvfb-run', '--auto-servernum', '--server-args=-screen 0 1280x1024x24',
         'soffice', '--headless', '--invisible', '--nocrashreport',
         '--nodefault', '--norestore', '--nologo', '--nofirststartwizard',
         f'-env:UserInstallation={profile_uri}',
         f'--accept=socket,host=localhost,port={SOFFICE_PORT};urp;'
     ])
 
-def connect_uno(retries=40):
+def connect_uno(retries=90, soffice_proc=None):
     import uno
     local_ctx = uno.getComponentContext()
     resolver = local_ctx.ServiceManager.createInstanceWithContext(
         "com.sun.star.bridge.UnoUrlResolver", local_ctx)
     last_err = None
-    for _ in range(retries):
+    for i in range(retries):
+        if soffice_proc is not None and soffice_proc.poll() is not None:
+            raise Exception(f"soffice process crash ho gayi (exit code {soffice_proc.returncode}) connect karne se pehle")
         try:
             ctx = resolver.resolve(
                 f"uno:socket,host=localhost,port={SOFFICE_PORT};urp;StarOffice.ComponentContext")
+            print(f"✅ LibreOffice se connect ho gaya ({i+1} tries ke baad)")
             return ctx
         except Exception as e:
             last_err = e
-            time.sleep(0.5)
+            if i % 10 == 0:
+                print(f"⏳ LibreOffice start hone ka wait... ({i+1}/{retries})")
+            time.sleep(1)
     raise Exception(f"LibreOffice se connect nahi hua: {last_err}")
 
 def make_prop(name, value):
@@ -179,7 +185,7 @@ def export_selected_sheets_pdf(xlsx_path, pdf_path, target_sheets):
     profile_dir = tempfile.mkdtemp(prefix='lo_profile_')
     proc = start_soffice(profile_dir)
     try:
-        ctx = connect_uno()
+        ctx = connect_uno(soffice_proc=proc)
         smgr = ctx.ServiceManager
         desktop = smgr.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
 
