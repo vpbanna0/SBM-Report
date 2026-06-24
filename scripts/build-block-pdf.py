@@ -144,10 +144,11 @@ def get_pdf_name(xlsx_path):
 # ══════════════════════════════════════════════
 
 def start_soffice(profile_dir):
+    profile_uri = Path(profile_dir).resolve().as_uri()
     return subprocess.Popen([
         'soffice', '--headless', '--invisible', '--nocrashreport',
         '--nodefault', '--norestore', '--nologo', '--nofirststartwizard',
-        f'--env:UserInstallation=file://{profile_dir}',
+        f'-env:UserInstallation={profile_uri}',
         f'--accept=socket,host=localhost,port={SOFFICE_PORT};urp;'
     ])
 
