@@ -59,7 +59,7 @@ jobs:
           ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
 
       - name: Build Block Report PDF (LibreOffice UNO)
-        timeout-minutes: 5
+        timeout-minutes: 15
         run: python3 -u scripts/build-block-pdf.py
         env:
           ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
