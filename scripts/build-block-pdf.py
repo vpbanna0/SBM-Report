@@ -148,12 +148,21 @@ def start_soffice(profile_dir):
     env = os.environ.copy()
     env['SAL_USE_VCLPLUGIN'] = 'svp'   # X11/display ki zaroorat nahi - pure headless rendering
     env['HOME'] = profile_dir           # kuch font/config cache yahi dhundta hai
-    return subprocess.Popen([
+
+    # IMPORTANT: soffice ka output parent ke stdout/stderr se ALAG file mein redirect karo.
+    # Agar inherit kiya to soffice ka background process GitHub Actions ke stdout pipe ko
+    # pakda rakhega aur step kabhi terminate nahi hoga, chahe humara python script khatam ho jaye.
+    log_path = os.path.join(profile_dir, 'soffice_output.log')
+    log_file = open(log_path, 'w')
+
+    proc = subprocess.Popen([
         'soffice', '--headless', '--invisible', '--nocrashreport',
         '--nodefault', '--norestore', '--nologo', '--nofirststartwizard',
         f'-env:UserInstallation={profile_uri}',
         f'--accept=socket,host=localhost,port={SOFFICE_PORT};urp;'
-    ], env=env)
+    ], env=env, stdout=log_file, stderr=log_file, stdin=subprocess.DEVNULL)
+    proc._log_file = log_file  # cleanup ke liye reference rakho
+    return proc
 
 def connect_uno(retries=90, soffice_proc=None):
     import uno
@@ -194,46 +203,92 @@ def export_selected_sheets_pdf(xlsx_path, pdf_path, target_sheets):
         url = "file://" + os.path.abspath(str(xlsx_path))
         load_props = (
             make_prop("Hidden", True),
-            make_prop("ReadOnly", True),
-            make_prop("MacroExecutionMode", 0),   # VBA macro accidentally run na ho
+            make_prop("MacroExecutionMode", 0),  # VBA macro run na ho
         )
+        # NOTE: ReadOnly=False rakho — visibility toggle ke liye write access chahiye
+        # (Lekin disk pe save nahi karenge — storeToURL ek alag PDF file banata hai)
         doc = desktop.loadComponentFromURL(url, "_blank", 0, load_props)
 
         sheets = doc.Sheets
         all_names = list(sheets.ElementNames)
         target_lower = [t.strip().lower() for t in target_sheets]
 
-        # Actual workbook tab-order mein matched sheets (VBA jaisa hi behaviour)
         ordered_matched = [n for n in all_names if n.strip().lower() in target_lower]
-        print(f"📋 Matched sheets (tab order): {ordered_matched}")
+        print(f"📋 Matched sheets ({len(ordered_matched)}): {ordered_matched}")
 
         if not ordered_matched:
             print("⚠️ Koi target sheet nahi mili — saari sheets export ho rahi hain")
             ordered_matched = all_names
 
-        sheet_objs = tuple(sheets.getByName(n) for n in ordered_matched)
+        # ── CORE LOGIC ──────────────────────────────────────────────────────
+        # Sheets delete nahi karte (reference errors aate hain).
+        # Sirf unwanted sheets ko INVISIBLE kar dete hain — sab formulas/references
+        # memory mein intact rehti hain, sirf PDF mein nahi aate.
+        # LibreOffice PDF export automatically sirf VISIBLE sheets export karta hai.
+        # ────────────────────────────────────────────────────────────────────
+        hidden_by_us = []
+        at_least_one_visible = False
 
-        controller = doc.CurrentController
-        controller.select(sheet_objs)
-        selection = controller.getSelection()
+        for name in all_names:
+            sheet = sheets.getByName(name)
+            is_target = name.strip().lower() in target_lower
+            if is_target:
+                # Target sheet — visible rakho (agar pehle se hidden thi to bhi show karo)
+                try:
+                    if not sheet.IsVisible:
+                        sheet.IsVisible = True
+                except Exception:
+                    pass
+                at_least_one_visible = True
+            else:
+                # Non-target sheet — hide karo, original state yaad rakho
+                try:
+                    was_visible = sheet.IsVisible
+                    if was_visible:
+                        sheet.IsVisible = False
+                        hidden_by_us.append(name)
+                except Exception:
+                    pass  # kuch sheets already very-hidden hoti hain — skip karo
 
-        export_props = (
-            make_prop("FilterName", "calc_pdf_Export"),
-            make_prop("FilterData", (make_prop("Selection", selection),)),
-        )
+        print(f"👁️ Hidden sheets: {len(hidden_by_us)}, Visible (export hongi): {len(ordered_matched)}")
+
+        # PDF export — sirf visible sheets aayengi, koi extra filter nahi chahiye
+        export_props = (make_prop("FilterName", "calc_pdf_Export"),)
 
         out_url = "file://" + os.path.abspath(str(pdf_path))
+        print("🖨️ PDF export shuru ho raha hai...")
+        t0 = time.time()
         doc.storeToURL(out_url, export_props)
+        print(f"✅ PDF export complete ({time.time() - t0:.1f} seconds)")
+
         doc.close(False)
         print(f"✅ PDF exported: {pdf_path}")
 
     finally:
+        print("🧹 LibreOffice process cleanup ho raha hai...")
         try:
             proc.terminate()
-            proc.wait(timeout=10)
+            proc.wait(timeout=8)
         except Exception:
-            proc.kill()
+            try:
+                proc.kill()
+                proc.wait(timeout=5)
+            except Exception:
+                pass
+        try:
+            if hasattr(proc, '_log_file'):
+                proc._log_file.close()
+        except Exception:
+            pass
+        # Safety net: kabhi-kabhi soffice.bin alag se background mein chalta reh jaata hai
+        # aur stdout pipe pakda rakhta hai - isliye forcefully sab kill karo
+        try:
+            subprocess.run(['pkill', '-9', '-f', 'soffice'], timeout=5,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
         shutil.rmtree(profile_dir, ignore_errors=True)
+        print("✅ Cleanup complete")
 
 
 # ══════════════════════════════════════════════
@@ -268,3 +323,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)   # forceful clean exit - koi background thread/fd process ko rokein nahi
