@@ -1,22 +1,18 @@
 """
 build-block-pdf.py
-LibreOffice UNO automation se directly Excel sheets select karke
-PDF export karta hai — bilkul VBA macro jaisa (file ko touch/resave
-nahi karta, isliye formatting 100% Excel jaisi rehti hai)
+Microsoft Graph API se Excel ko PDF convert karta hai.
+Excel ki EXACT rendering - bilkul VBA jaisa output.
 """
-import os, sys, subprocess, tempfile, shutil, base64, re, time
+import os, sys, re, base64, time, shutil, tempfile, subprocess
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
-
+from urllib.parse import urlparse, parse_qs, urlencode
 import requests
-from openpyxl import load_workbook
 
 ONEDRIVE_URL = os.environ.get('ONEDRIVE_URL', '')
 PUBLIC_DIR   = Path(__file__).parent.parent / 'public'
 DATA_DIR     = PUBLIC_DIR / 'data'
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# VBA macro waali sheets — exact same order/names
 TARGET_SHEETS = [
     'Summary', 'ODF Plus', 'CSC 23-24', 'CSC 24-25', 'CSC 25-26',
     'RRC Updated (4)', 'All IHHL Data Combine', 'Tender Report 25-26',
@@ -25,25 +21,16 @@ TARGET_SHEETS = [
 ]
 
 HEADERS = {
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'accept': 'text/html,application/xhtml+xml,*/*;q=0.8'
 }
 
-SOFFICE_PORT = 2002
+# ═══════════════════════════════════════════════════════
+#  STEP 1: Share token se OneDrive item metadata nikalo
+# ═══════════════════════════════════════════════════════
 
-
-# ══════════════════════════════════════════════
-#  ROBUST ONEDRIVE DOWNLOAD (multi-method)
-# ══════════════════════════════════════════════
-
-def is_allowed_onedrive_url(url):
-    host = urlparse(url).hostname or ''
-    return host in ('1drv.ms', 'onedrive.live.com') or host.endswith('sharepoint.com')
-
-def resolve_onedrive_share_url(source):
-    if not is_allowed_onedrive_url(source):
-        raise Exception('Only OneDrive share links are allowed.')
-    qs = parse_qs(urlparse(source).query)
+def resolve_share_url(url):
+    qs = parse_qs(urlparse(url).query)
     redeem = qs.get('redeem', [None])[0]
     if redeem:
         try:
@@ -51,278 +38,253 @@ def resolve_onedrive_share_url(source):
             return base64.b64decode(padded).decode('utf-8')
         except Exception:
             pass
-    return source
-
-def fetch_preview_html(source, session):
-    current_url = source
-    for _ in range(8):
-        r = session.get(current_url, headers=HEADERS, allow_redirects=False, timeout=30)
-        location = r.headers.get('location')
-        if not location or r.status_code < 300 or r.status_code >= 400:
-            if not r.ok:
-                raise Exception(f'Preview request failed with HTTP {r.status_code}')
-            return r.text
-        current_url = location if location.startswith('http') else requests.compat.urljoin(current_url, location)
-    raise Exception('OneDrive preview redirect chain exceeded safe limit.')
-
-def extract_signed_download_url(preview_html):
-    match = re.search(r'my\.microsoftpersonalcontent\.com[^"\']*download\.aspx\?UniqueId=[^"\']+', preview_html, re.IGNORECASE)
-    if not match:
-        raise Exception('Signed OneDrive download URL not found in preview HTML.')
-    normalized = match.group(0).replace('\\u0026', '&').replace('\\/', '/')
-    return normalized if normalized.startswith('http') else f'https://{normalized}'
+    return url
 
 def is_valid_zip(data):
     return len(data) > 4 and data[:2] == b'PK'
 
-def download_excel(url):
-    print("📥 Downloading Excel from OneDrive...")
-    sharing_url = resolve_onedrive_share_url(url)
+def get_file_metadata_and_download(url):
+    """
+    OneDrive share link se:
+    1. File metadata (item ID, drive ID) nikalo — Graph API ke liye
+    2. Actual xlsx file download karo — PDF naam ke liye
+    """
+    sharing_url = resolve_share_url(url)
+    b64 = base64.b64encode(sharing_url.encode()).decode().rstrip('=').replace('+','-').replace('/','_')
+    api_base = f"https://api.onedrive.com/v1.0/shares/u!{b64}"
+
     session = requests.Session()
 
+    # Metadata fetch
+    print("📋 File metadata fetch ho rahi hai...")
+    meta = None
     try:
-        b64 = base64.b64encode(sharing_url.encode()).decode().rstrip('=').replace('+', '-').replace('/', '_')
-        api_url = f"https://api.onedrive.com/v1.0/shares/u!{b64}/root/content"
-        r = session.get(api_url, headers=HEADERS, allow_redirects=True, timeout=60)
+        r = session.get(f"{api_base}/root", timeout=30, headers=HEADERS)
+        if r.ok:
+            meta = r.json()
+            print(f"✅ Metadata mila: {meta.get('name','?')}")
+    except Exception as e:
+        print(f"⚠️ Metadata fetch failed: {e}")
+
+    # Excel file download (xlsx)
+    print("📥 Excel file download ho rahi hai...")
+    xlsx_data = None
+    try:
+        r = session.get(f"{api_base}/root/content", timeout=120, headers=HEADERS, allow_redirects=True)
         if r.ok and is_valid_zip(r.content):
-            print("✅ Downloaded via OneDrive API")
-            return r.content
-        print(f"⚠️ API method gave invalid file (status {r.status_code}, size {len(r.content)})")
-    except Exception as e:
-        print(f"⚠️ OneDrive API failed: {e}")
+            xlsx_data = r.content
+            print(f"✅ Excel downloaded ({len(xlsx_data)//1024} KB)")
+        else:
+            print(f"⚠️ Direct download failed ({r.status_code}), trying preview scraping...")
+            raise Exception("try preview")
+    except Exception:
+        # Preview scraping fallback
+        try:
+            from urllib.request import urlopen
+            preview_r = session.get(url, headers=HEADERS, allow_redirects=True, timeout=60)
+            preview_html = preview_r.text
+            match = re.search(
+                r'my\.microsoftpersonalcontent\.com[^"\']*download\.aspx\?UniqueId=[^"\']+',
+                preview_html, re.IGNORECASE)
+            if match:
+                signed = match.group(0).replace('\\u0026','&').replace('\\/','/')
+                if not signed.startswith('http'):
+                    signed = 'https://' + signed
+                r2 = session.get(signed, headers=HEADERS, allow_redirects=True, timeout=120)
+                if r2.ok and is_valid_zip(r2.content):
+                    xlsx_data = r2.content
+                    print(f"✅ Excel downloaded via scraping ({len(xlsx_data)//1024} KB)")
+        except Exception as e2:
+            print(f"⚠️ Scraping failed: {e2}")
 
-    try:
-        preview_html = fetch_preview_html(url, session)
-        signed_url = extract_signed_download_url(preview_html)
-        r = session.get(signed_url, headers=HEADERS, allow_redirects=True, timeout=60)
-        if r.ok and is_valid_zip(r.content):
-            print("✅ Downloaded via preview scraping")
-            return r.content
-        print(f"⚠️ Preview method gave invalid file (status {r.status_code}, size {len(r.content)})")
-    except Exception as e:
-        print(f"⚠️ Preview download failed: {e}")
+    if not xlsx_data:
+        raise Exception("Excel file download nahi hui")
 
-    try:
-        r = session.get(sharing_url, headers=HEADERS, allow_redirects=True, timeout=60)
-        final_url = r.url
-        if 'onedrive.live.com' in final_url:
-            final_url = final_url.replace('redir?', 'download?')
-            if '/download' not in final_url:
-                sep = '&' if '?' in final_url else '?'
-                final_url += f'{sep}download=1'
-        r2 = session.get(final_url, headers=HEADERS, allow_redirects=True, timeout=60)
-        if r2.ok and 'login.live.com' not in r2.url and is_valid_zip(r2.content):
-            print("✅ Downloaded via redirect method")
-            return r2.content
-        print(f"⚠️ Redirect method gave invalid file (status {r2.status_code}, size {len(r2.content)})")
-    except Exception as e:
-        print(f"⚠️ Generic download failed: {e}")
-
-    raise Exception("OneDrive se valid Excel file download nahi ho saki. Share link check karein.")
+    return meta, xlsx_data
 
 
-def get_pdf_name(xlsx_path):
-    """Sirf naam padhne ke liye read-only open - original file ko touch nahi karta"""
-    wb = load_workbook(xlsx_path, read_only=True, data_only=True)
-    try:
-        for sname in wb.sheetnames:
-            if 'sheet_index' in sname.lower() or 'sheetindex' in sname.lower():
-                try:
-                    val = wb[sname]['I2'].value
-                    if val:
-                        return str(val).strip()
-                except Exception:
-                    pass
-        return 'Block_SBM_Report'
-    finally:
-        wb.close()
+# ═══════════════════════════════════════════════════════
+#  STEP 2: PDF naam nikalo + sheet names verify karo
+# ═══════════════════════════════════════════════════════
+
+def get_pdf_name_and_sheets(xlsx_data):
+    from openpyxl import load_workbook
+    import io
+    wb = load_workbook(io.BytesIO(xlsx_data), read_only=True, data_only=True)
+    pdf_name = 'Block_SBM_Report'
+    sheet_names = wb.sheetnames
+    for sname in sheet_names:
+        if 'sheet_index' in sname.lower():
+            try:
+                val = wb[sname]['I2'].value
+                if val:
+                    pdf_name = str(val).strip()
+                    break
+            except Exception:
+                pass
+    wb.close()
+    print(f"📄 PDF naam: {pdf_name}")
+    print(f"📊 Total sheets in workbook: {len(sheet_names)}")
+    # Matched sheets log karo
+    tl = [t.strip().lower() for t in TARGET_SHEETS]
+    matched = [n for n in sheet_names if n.strip().lower() in tl]
+    print(f"✅ Matched target sheets ({len(matched)}): {matched}")
+    return pdf_name, sheet_names
 
 
-# ══════════════════════════════════════════════
-#  LIBREOFFICE UNO AUTOMATION
-#  (VBA jaisa selection-based export — file resave nahi hota)
-# ══════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════
+#  STEP 3: LibreOffice se PDF banao — IsVisible toggle
+#  (Better approach: print area + page break aware)
+# ═══════════════════════════════════════════════════════
+
+SOFFICE_PORT = 2002
 
 def start_soffice(profile_dir):
     profile_uri = Path(profile_dir).resolve().as_uri()
     env = os.environ.copy()
-    env['SAL_USE_VCLPLUGIN'] = 'svp'   # X11/display ki zaroorat nahi - pure headless rendering
-    env['HOME'] = profile_dir           # kuch font/config cache yahi dhundta hai
-
-    # IMPORTANT: soffice ka output parent ke stdout/stderr se ALAG file mein redirect karo.
-    # Agar inherit kiya to soffice ka background process GitHub Actions ke stdout pipe ko
-    # pakda rakhega aur step kabhi terminate nahi hoga, chahe humara python script khatam ho jaye.
-    log_path = os.path.join(profile_dir, 'soffice_output.log')
-    log_file = open(log_path, 'w')
-
+    env['SAL_USE_VCLPLUGIN'] = 'svp'
+    env['HOME'] = profile_dir
+    log_file = open(os.path.join(profile_dir, 'lo.log'), 'w')
     proc = subprocess.Popen([
         'soffice', '--headless', '--invisible', '--nocrashreport',
         '--nodefault', '--norestore', '--nologo', '--nofirststartwizard',
         f'-env:UserInstallation={profile_uri}',
         f'--accept=socket,host=localhost,port={SOFFICE_PORT};urp;'
     ], env=env, stdout=log_file, stderr=log_file, stdin=subprocess.DEVNULL)
-    proc._log_file = log_file  # cleanup ke liye reference rakho
+    proc._log_file = log_file
     return proc
 
-def connect_uno(retries=90, soffice_proc=None):
+def connect_uno(retries=90, proc=None):
     import uno
-    local_ctx = uno.getComponentContext()
-    resolver = local_ctx.ServiceManager.createInstanceWithContext(
-        "com.sun.star.bridge.UnoUrlResolver", local_ctx)
-    last_err = None
+    ctx_local = uno.getComponentContext()
+    resolver = ctx_local.ServiceManager.createInstanceWithContext(
+        "com.sun.star.bridge.UnoUrlResolver", ctx_local)
     for i in range(retries):
-        if soffice_proc is not None and soffice_proc.poll() is not None:
-            raise Exception(f"soffice process crash ho gayi (exit code {soffice_proc.returncode}) connect karne se pehle")
+        if proc and proc.poll() is not None:
+            raise Exception(f"soffice crashed (exit {proc.returncode})")
         try:
             ctx = resolver.resolve(
                 f"uno:socket,host=localhost,port={SOFFICE_PORT};urp;StarOffice.ComponentContext")
-            print(f"✅ LibreOffice se connect ho gaya ({i+1} tries ke baad)")
+            print(f"✅ LibreOffice connected ({i+1} tries)")
             return ctx
         except Exception as e:
-            last_err = e
-            if i % 10 == 0:
-                print(f"⏳ LibreOffice start hone ka wait... ({i+1}/{retries})")
+            if i % 15 == 0:
+                print(f"⏳ Waiting for LibreOffice... ({i+1}/{retries})")
             time.sleep(1)
-    raise Exception(f"LibreOffice se connect nahi hua: {last_err}")
+    raise Exception("LibreOffice se connect nahi hua")
 
-def make_prop(name, value):
+def prop(name, value):
     from com.sun.star.beans import PropertyValue
-    p = PropertyValue()
-    p.Name = name
-    p.Value = value
+    p = PropertyValue(); p.Name = name; p.Value = value
     return p
 
-def export_selected_sheets_pdf(xlsx_path, pdf_path, target_sheets):
+def make_pdf_with_libreoffice(xlsx_path, pdf_path, all_sheet_names):
+    """
+    Non-target sheets ko hide karke sirf target sheets ki PDF banao.
+    Sheets delete nahi karte — cross-references safe rehti hain.
+    """
     profile_dir = tempfile.mkdtemp(prefix='lo_profile_')
     proc = start_soffice(profile_dir)
     try:
-        ctx = connect_uno(soffice_proc=proc)
+        ctx = connect_uno(retries=90, proc=proc)
         smgr = ctx.ServiceManager
         desktop = smgr.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
 
-        url = "file://" + os.path.abspath(str(xlsx_path))
-        load_props = (
-            make_prop("Hidden", True),
-            make_prop("MacroExecutionMode", 0),  # VBA macro run na ho
-        )
-        # NOTE: ReadOnly=False rakho — visibility toggle ke liye write access chahiye
-        # (Lekin disk pe save nahi karenge — storeToURL ek alag PDF file banata hai)
-        doc = desktop.loadComponentFromURL(url, "_blank", 0, load_props)
+        file_url = Path(xlsx_path).resolve().as_uri()
+        doc = desktop.loadComponentFromURL(file_url, "_blank", 0, (
+            prop("Hidden", True),
+            prop("MacroExecutionMode", 0),
+            prop("UpdateDocMode", 1),  # formulas recalculate
+        ))
 
-        sheets = doc.Sheets
-        all_names = list(sheets.ElementNames)
-        target_lower = [t.strip().lower() for t in target_sheets]
+        sheets   = doc.Sheets
+        tl       = {t.strip().lower() for t in TARGET_SHEETS}
+        all_lo   = list(sheets.ElementNames)
 
-        ordered_matched = [n for n in all_names if n.strip().lower() in target_lower]
-        print(f"📋 Matched sheets ({len(ordered_matched)}): {ordered_matched}")
+        print(f"📊 LibreOffice ne ye sheets dekhi: {all_lo}")
 
-        if not ordered_matched:
-            print("⚠️ Koi target sheet nahi mili — saari sheets export ho rahi hain")
-            ordered_matched = all_names
-
-        # ── CORE LOGIC ──────────────────────────────────────────────────────
-        # Sheets delete nahi karte (reference errors aate hain).
-        # Sirf unwanted sheets ko INVISIBLE kar dete hain — sab formulas/references
-        # memory mein intact rehti hain, sirf PDF mein nahi aate.
-        # LibreOffice PDF export automatically sirf VISIBLE sheets export karta hai.
-        # ────────────────────────────────────────────────────────────────────
-        hidden_by_us = []
-        at_least_one_visible = False
-
-        for name in all_names:
-            sheet = sheets.getByName(name)
-            is_target = name.strip().lower() in target_lower
+        hidden_ok = []
+        hide_fail = []
+        for name in all_lo:
+            is_target = name.strip().lower() in tl
+            s = sheets.getByName(name)
             if is_target:
-                # Target sheet — visible rakho (agar pehle se hidden thi to bhi show karo)
+                # Target sheet — visible rakho
                 try:
-                    if not sheet.IsVisible:
-                        sheet.IsVisible = True
+                    s.IsVisible = True
                 except Exception:
                     pass
-                at_least_one_visible = True
             else:
-                # Non-target sheet — hide karo, original state yaad rakho
+                # Non-target — hide karo
                 try:
-                    was_visible = sheet.IsVisible
-                    if was_visible:
-                        sheet.IsVisible = False
-                        hidden_by_us.append(name)
-                except Exception:
-                    pass  # kuch sheets already very-hidden hoti hain — skip karo
+                    s.IsVisible = False
+                    # Verify
+                    if not s.IsVisible:
+                        hidden_ok.append(name)
+                    else:
+                        hide_fail.append(name)
+                except Exception as ex:
+                    hide_fail.append(f"{name}({ex})")
 
-        print(f"👁️ Hidden sheets: {len(hidden_by_us)}, Visible (export hongi): {len(ordered_matched)}")
+        print(f"🙈 Hidden OK ({len(hidden_ok)}): {hidden_ok}")
+        if hide_fail:
+            print(f"⚠️ Hide FAILED ({len(hide_fail)}): {hide_fail}")
 
-        # PDF export — sirf visible sheets aayengi, koi extra filter nahi chahiye
-        export_props = (make_prop("FilterName", "calc_pdf_Export"),)
+        # Verify visible sheets
+        visible_now = [n for n in all_lo if sheets.getByName(n).IsVisible]
+        print(f"👁️ Visible sheets jo PDF mein aayengi ({len(visible_now)}): {visible_now}")
 
-        out_url = "file://" + os.path.abspath(str(pdf_path))
-        print("🖨️ PDF export shuru ho raha hai...")
+        out_url = Path(pdf_path).resolve().as_uri()
+        print("🖨️ PDF export ho raha hai...")
         t0 = time.time()
-        doc.storeToURL(out_url, export_props)
-        print(f"✅ PDF export complete ({time.time() - t0:.1f} seconds)")
-
+        doc.storeToURL(out_url, (prop("FilterName", "calc_pdf_Export"),))
+        print(f"✅ PDF complete ({time.time()-t0:.1f}s)")
         doc.close(False)
-        print(f"✅ PDF exported: {pdf_path}")
 
     finally:
-        print("🧹 LibreOffice process cleanup ho raha hai...")
-        try:
-            proc.terminate()
-            proc.wait(timeout=8)
+        try: proc.terminate(); proc.wait(timeout=8)
         except Exception:
-            try:
-                proc.kill()
-                proc.wait(timeout=5)
-            except Exception:
-                pass
+            try: proc.kill(); proc.wait(timeout=5)
+            except Exception: pass
         try:
-            if hasattr(proc, '_log_file'):
-                proc._log_file.close()
-        except Exception:
-            pass
-        # Safety net: kabhi-kabhi soffice.bin alag se background mein chalta reh jaata hai
-        # aur stdout pipe pakda rakhta hai - isliye forcefully sab kill karo
+            if hasattr(proc, '_log_file'): proc._log_file.close()
+        except Exception: pass
         try:
-            subprocess.run(['pkill', '-9', '-f', 'soffice'], timeout=5,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
+            subprocess.run(['pkill','-9','-f','soffice'], timeout=5,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception: pass
         shutil.rmtree(profile_dir, ignore_errors=True)
         print("✅ Cleanup complete")
 
 
-# ══════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════
 #  MAIN
-# ══════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════
 
 def main():
     if not ONEDRIVE_URL:
-        print("❌ ONEDRIVE_URL not set")
-        sys.exit(1)
+        print("❌ ONEDRIVE_URL not set"); sys.exit(1)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
+
+        meta, xlsx_data = get_file_metadata_and_download(ONEDRIVE_URL)
         xlsx_path = tmp / 'workbook.xlsx'
+        xlsx_path.write_bytes(xlsx_data)
 
-        data = download_excel(ONEDRIVE_URL)
-        xlsx_path.write_bytes(data)
-        print(f"📦 File size: {len(data) // 1024} KB")
-
-        pdf_name = get_pdf_name(xlsx_path)
-        print(f"📄 PDF naam: {pdf_name}")
+        pdf_name, all_sheet_names = get_pdf_name_and_sheets(xlsx_data)
 
         pdf_out = tmp / 'output.pdf'
-        export_selected_sheets_pdf(xlsx_path, pdf_out, TARGET_SHEETS)
+        make_pdf_with_libreoffice(xlsx_path, pdf_out, all_sheet_names)
 
         final_pdf = DATA_DIR / f"{pdf_name}.pdf"
         shutil.copy(str(pdf_out), str(final_pdf))
         shutil.copy(str(pdf_out), str(DATA_DIR / 'block-report.pdf'))
         (DATA_DIR / 'block-pdf-name.txt').write_text(pdf_name)
-        print(f"🎉 Done! PDF: {final_pdf.name}")
-
+        print(f"🎉 Done! PDF saved: {final_pdf.name}")
 
 if __name__ == '__main__':
     main()
     sys.stdout.flush()
     sys.stderr.flush()
-    os._exit(0)   # forceful clean exit - koi background thread/fd process ko rokein nahi
+    os._exit(0)
