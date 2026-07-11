@@ -58,11 +58,18 @@ jobs:
         env:
           ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
 
-      - name: Build Block Report PDF (LibreOffice UNO)
+      - name: Build Block Report PDF (Excel Online, LibreOffice fallback)
         timeout-minutes: 45
         run: python3 -u scripts/build-block-pdf.py
         env:
           ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
+          PDF_ENGINE: ${{ vars.PDF_ENGINE || 'auto' }}
+          GRAPH_ACCESS_TOKEN: ${{ secrets.GRAPH_ACCESS_TOKEN }}
+          MS_GRAPH_TENANT: ${{ secrets.MS_GRAPH_TENANT }}
+          MS_GRAPH_CLIENT_ID: ${{ secrets.MS_GRAPH_CLIENT_ID }}
+          MS_GRAPH_CLIENT_SECRET: ${{ secrets.MS_GRAPH_CLIENT_SECRET }}
+          MS_GRAPH_REFRESH_TOKEN: ${{ secrets.MS_GRAPH_REFRESH_TOKEN }}
+          MS_GRAPH_SCOPES: ${{ secrets.MS_GRAPH_SCOPES }}
           PYTHONUNBUFFERED: "1"
 
       - name: Setup Pages
