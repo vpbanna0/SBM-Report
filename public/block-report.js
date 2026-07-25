@@ -1,147 +1,137 @@
-/* ═══════════════════════════════════════════════════════════
-   block-report.js — Block SBM Report
-   workbook.json → HTML tables → jsPDF (GP Report jaisa)
-   No LibreOffice, No Python, No Azure — pure browser PDF
-═══════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   block-report.js  —  Block SBM Report
+   Direct jsPDF download — GP Report jaise
+══════════════════════════════════════════════════════ */
 
 const BlockReport = (() => {
 
   const TARGET_SHEETS = [
-    'Summary', 'ODF Plus', 'CSC 23-24', 'CSC 24-25', 'CSC 25-26',
-    'RRC Updated (4)', 'All IHHL Data Combine', 'Tender Report 25-26',
-    'Target AIP 26-27', 'AIP 26-27 Financial', 'Soak Pit 26-27',
-    'Compost Pit 26-27', 'Individual assest 26-27'
+    'Summary','ODF Plus','CSC 23-24','CSC 24-25','CSC 25-26',
+    'RRC Updated (4)','All IHHL Data Combine','Tender Report 25-26',
+    'Target AIP 26-27','AIP 26-27 Financial','Soak Pit 26-27',
+    'Compost Pit 26-27','Individual assest 26-27'
   ];
 
-  let pdfTitle  = 'Block_SBM_Report';
-  let allSheets = {};
-  let activeTab = null;
+  const PDF_NAME_SHEET = 'sheet_index';
+  const PDF_NAME_ROW   = 1;
+  const PDF_NAME_COL   = 8;
 
-  // ── Helpers ──────────────────────────────────────────────
-  const norm = s => String(s ?? '').toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, '');
+  let allSheets  = {};
+  let sheetNames = [];
+  let pdfTitle   = 'Block_SBM_Report';
+  let activeSheet = null;
 
-  function findKey(target) {
-    const t = norm(target);
+  function norm(s) {
+    return String(s ?? '').toLowerCase().replace(/\s+/g,'_').replace(/[()]/g,'');
+  }
+
+  function findSheetKey(targetName) {
+    const t = norm(targetName);
     return Object.keys(allSheets).find(k => norm(k) === t)
-        || Object.keys(allSheets).find(k => norm(k).includes(t) || t.includes(norm(k)))
-        || null;
+      || Object.keys(allSheets).find(k => norm(k).includes(t) || t.includes(norm(k)))
+      || null;
   }
 
-  function esc(s) {
-    return String(s ?? '').replace(/[&<>"']/g, m =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-  }
-
-  function setStatus(msg, type = '') {
+  function setStatus(msg, type='') {
     const el = document.getElementById('statusMsg');
     if (!el) return;
     el.textContent = msg;
-    el.className = 'status-pill' + (type ? ' ' + type : '');
+    el.className = 'status-pill' + (type ? ' '+type : '');
   }
 
-  function showModal(show, pct = 0, title = '', sub = '') {
-    const m = document.getElementById('pdfModal');
-    if (!m) return;
-    m.style.display = show ? 'flex' : 'none';
-    if (show) {
-      document.getElementById('pdfModalTitle').textContent = title;
-      document.getElementById('pdfModalSub').textContent = sub;
-      document.getElementById('pdfProgressBar').style.width = Math.min(100, pct) + '%';
-    }
+  function showLoading(show, msg='') {
+    const el = document.getElementById('loadingOverlay');
+    const msgEl = document.getElementById('loadingMsg');
+    if (el) el.style.display = show ? 'flex' : 'none';
+    if (msg && msgEl) msgEl.textContent = msg;
   }
 
-  // ── Data Load ────────────────────────────────────────────
-  async function init() {
+  // ── DATA LOAD ──
+  async function load() {
+    showLoading(true, 'डेटा लोड हो रहा है…');
     setStatus('डेटा लोड हो रहा है…');
+    document.getElementById('btnPDF').disabled = true;
+
     try {
       let result = null;
 
-      // GitHub Pages: static workbook.json
       try {
-        const r = await fetch(`data/workbook.json?ts=${Date.now()}`, { cache: 'no-store' });
-        if (r.ok) { result = await r.json(); if (!result?.sheets) result = null; }
-      } catch (_) {}
+        const res = await fetch(`data/workbook.json?ts=${Date.now()}`, { cache:'no-store' });
+        if (res.ok) { result = await res.json(); if (!result?.sheets) result = null; }
+      } catch(_) {}
 
-      // Local server fallback
-      if (!result?.sheets) {
-        const r = await fetch('/api/load-excel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh: false })
+      if (!result) {
+        const res = await fetch('/api/load-excel', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ refresh:false })
         });
-        result = await r.json();
+        result = await res.json();
       }
 
-      if (!result?.sheets) throw new Error('workbook data नहीं मिला');
+      if (!result) throw new Error('डेटा नहीं मिला');
 
-      allSheets = result.sheets;
+      allSheets  = result.sheets  || {};
+      sheetNames = result.sheetNames || Object.keys(allSheets);
 
-      // PDF naam: Sheet_Index row-1 col-I (index 8)
-      const idxKey = Object.keys(allSheets).find(k => k.toLowerCase().includes('sheet_index'));
-      if (idxKey && allSheets[idxKey]?.[1]?.[8]) {
-        pdfTitle = String(allSheets[idxKey][1][8]).trim() || pdfTitle;
-      }
-      const badge = document.getElementById('pdfBadge');
-      if (badge) { badge.textContent = '📄 ' + pdfTitle; badge.style.display = ''; }
-
-      renderAll();
+      extractPdfName();
+      renderAllSheets();
       buildTabs();
-      setStatus('✅ डेटा लोड हो गया', 'ok');
+
+      setStatus(`✅ डेटा लोड हो गया — ${sheetNames.length} sheets`, 'ok');
       document.getElementById('btnPDF').disabled = false;
 
-    } catch (err) {
+    } catch(err) {
       console.error(err);
       setStatus('❌ ' + err.message, 'err');
       document.getElementById('reportContent').innerHTML =
         `<div class="placeholder"><div class="placeholder-icon">❌</div>
-         <div class="placeholder-text">${esc(err.message)}</div></div>`;
+         <div class="placeholder-text">डेटा लोड नहीं हो सका।<br><small>${esc(err.message)}</small></div></div>`;
+    } finally {
+      showLoading(false);
     }
   }
 
-  // ── Render one sheet as HTML table ───────────────────────
-  function makeTable(rows) {
-    if (!rows?.length) return '<p class="no-rows">कोई डेटा नहीं</p>';
-    const header   = rows[0] || [];
-    const bodyRows = rows.slice(1);
-    const cols     = header.length || (bodyRows[0]?.length ?? 0);
-
-    let html = '<div class="tbl-wrap"><table><thead><tr>';
-    for (let c = 0; c < cols; c++)
-      html += `<th>${esc(String(header[c] ?? ''))}</th>`;
-    html += '</tr></thead><tbody>';
-
-    bodyRows.forEach(row => {
-      html += '<tr>';
-      for (let c = 0; c < cols; c++)
-        html += `<td>${esc(String(row?.[c] ?? ''))}</td>`;
-      html += '</tr>';
-    });
-    return html + '</tbody></table></div>';
+  function extractPdfName() {
+    const key = Object.keys(allSheets).find(k =>
+      k.toLowerCase().includes('sheet_index') || k.toLowerCase().includes('sheetindex'));
+    if (key && allSheets[key]?.[PDF_NAME_ROW]?.[PDF_NAME_COL]) {
+      pdfTitle = String(allSheets[key][PDF_NAME_ROW][PDF_NAME_COL]).trim() || 'Block_SBM_Report';
+    }
+    const badge = document.getElementById('pdfNameBadge');
+    if (badge) { badge.textContent = '📄 '+pdfTitle; badge.style.display=''; }
+    const pd = document.getElementById('printPdfName');
+    if (pd) pd.textContent = pdfTitle;
+    const dt = document.getElementById('printDate');
+    if (dt) {
+      dt.textContent = new Date().toLocaleString('en-IN',
+        {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+    }
   }
 
-  // ── Render all target sheets ──────────────────────────────
-  function renderAll() {
+  // ── RENDER TABLES ──
+  function renderAllSheets() {
     const container = document.getElementById('reportContent');
     container.innerHTML = '';
     let found = 0;
 
-    TARGET_SHEETS.forEach(name => {
-      const key  = findKey(name);
+    TARGET_SHEETS.forEach(targetName => {
+      const key  = findSheetKey(targetName);
       const rows = key ? allSheets[key] : null;
 
       const block = document.createElement('div');
-      block.className      = 'sheet-block';
-      block.id             = 'sheet-' + norm(name);
-      block.dataset.name   = name;
+      block.className = 'sheet-block';
+      block.id = 'sheet-'+norm(targetName);
+      block.dataset.sheetName = targetName;
 
-      if (!rows?.length) {
+      if (!rows || rows.length === 0) {
         block.innerHTML =
-          `<div class="sheet-title">📋 ${esc(name)}</div>
-           <p class="no-rows">⚠️ Sheet नहीं मिली: "${esc(name)}"</p>`;
+          `<div class="sheet-title">📋 ${esc(targetName)}</div>
+           <p class="no-rows">⚠️ Sheet नहीं मिली: "${esc(targetName)}"</p>`;
       } else {
         found++;
         block.innerHTML =
-          `<div class="sheet-title">📋 ${esc(name)}</div>${makeTable(rows)}`;
+          `<div class="sheet-title">📋 ${esc(targetName)}</div>
+           <div class="tbl-wrap">${buildTable(rows)}</div>`;
       }
       container.appendChild(block);
     });
@@ -149,144 +139,213 @@ const BlockReport = (() => {
     setStatus(`✅ ${found} / ${TARGET_SHEETS.length} sheets मिलीं`, 'ok');
   }
 
-  // ── Tabs ─────────────────────────────────────────────────
-  function buildTabs() {
-    const el = document.getElementById('sheetTabs');
-    if (!el) return;
-    el.innerHTML = '';
-    el.style.display = 'flex';
+  function buildTable(rows) {
+    if (!rows?.length) return '<p class="no-rows">कोई डेटा नहीं</p>';
+    const MAX = 2000;
+    const disp = rows.slice(0, MAX);
+    const colCount = Math.max(1, ...disp.map(row => (row || []).length));
+    let html = '<table class="excel-like-table"><tbody>';
 
-    const allBtn = document.createElement('button');
-    allBtn.className   = 'tab-btn active';
-    allBtn.textContent = 'सभी Sheets';
-    allBtn.onclick = () => { showAll(); setActive(allBtn); };
-    el.appendChild(allBtn);
+    disp.forEach((row, rowIndex) => {
+      const cells = Array.from({ length: colCount }, (_, c) => row?.[c] ?? '');
+      const nonEmpty = cells
+        .map((value, index) => ({ value: String(value ?? '').trim(), index }))
+        .filter(cell => cell.value !== '');
+      const isTitle = rowIndex < 3 && nonEmpty.length > 0 && nonEmpty.length <= 2;
+      const isHeader = !isTitle && rowIndex < 6;
+      const rowClass = isTitle ? 'sheet-heading-row' : isHeader ? 'sheet-head-row' : '';
+
+      html += `<tr class="${rowClass}">`;
+
+      if (isTitle && nonEmpty.length === 1) {
+        html += `<th colspan="${colCount}" class="sheet-heading-cell">${formatCell(nonEmpty[0].value)}</th>`;
+        html += '</tr>';
+        return;
+      }
+
+      cells.forEach(value => {
+        const tag = isTitle || isHeader ? 'th' : 'td';
+        const text = String(value ?? '');
+        html += `<${tag} class="${cellClass(text)}">${formatCell(text)}</${tag}>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    if (rows.length > MAX) html += `<p class="no-rows">⚠️ केवल ${MAX} rows दिखाई जा रही हैं</p>`;
+    return html;
+  }
+
+  // ── TABS ──
+  function buildTabs() {
+    const tabsEl = document.getElementById('sheetTabs');
+    if (!tabsEl) return;
+    tabsEl.innerHTML = '';
+    tabsEl.style.display = 'flex';
+
+    const allTab = document.createElement('button');
+    allTab.className = 'tab-btn active';
+    allTab.textContent = 'सभी Sheets';
+    allTab.onclick = () => showAll(allTab);
+    tabsEl.appendChild(allTab);
 
     TARGET_SHEETS.forEach(name => {
       const btn = document.createElement('button');
-      btn.className   = 'tab-btn';
+      btn.className = 'tab-btn';
       btn.textContent = name;
-      btn.onclick = () => { showOnly(norm(name)); setActive(btn); };
-      el.appendChild(btn);
+      btn.onclick = () => showOnly(norm(name), btn);
+      tabsEl.appendChild(btn);
     });
-    activeTab = null;
+    activeSheet = null;
   }
 
-  function setActive(btn) {
+  function showAll(tab) {
+    activeSheet = null;
+    document.querySelectorAll('.sheet-block').forEach(b => b.classList.remove('hidden'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    tab.classList.add('active');
   }
-  function showAll()     { activeTab = null; document.querySelectorAll('.sheet-block').forEach(b => b.classList.remove('hidden')); }
-  function showOnly(id)  { activeTab = id;   document.querySelectorAll('.sheet-block').forEach(b => b.classList.toggle('hidden', b.id !== 'sheet-' + id)); }
+  function showOnly(id, tab) {
+    activeSheet = id;
+    document.querySelectorAll('.sheet-block').forEach(b => b.classList.toggle('hidden', b.id !== 'sheet-'+id));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    tab.classList.add('active');
+  }
 
-  // ── PDF Download — GP Report jaisa ───────────────────────
+  // ══════════════════════════════════════════════
+  //  DIRECT jsPDF DOWNLOAD  (GP Report jaisa)
+  // ══════════════════════════════════════════════
   async function downloadPDF() {
     const { jsPDF } = window.jspdf;
-    if (!jsPDF) { alert('jsPDF load nahi hua, page refresh karo'); return; }
+    if (!jsPDF) { alert('jsPDF लोड नहीं हुआ, पेज refresh करें।'); return; }
+    if (!window.html2canvas) { alert('html2canvas लोड नहीं हुआ, पेज refresh करें।'); return; }
 
-    const allBlocks = [...document.querySelectorAll('.sheet-block')];
-    const blocks    = allBlocks.filter(b => !b.querySelector('.no-rows'));
-    if (!blocks.length) { alert('Pehle data load karo'); return; }
+    const blocks = [...document.querySelectorAll('.sheet-block')];
+    if (!blocks.length) { alert('पहले डेटा लोड करें।'); return; }
 
     const btn = document.getElementById('btnPDF');
     btn.disabled = true;
+    showLoading(true, 'PDF बन रही है…');
 
-    // Temporarily show hidden blocks for capture
-    const wasHidden = [];
-    allBlocks.forEach(b => {
-      if (b.classList.contains('hidden')) {
-        b.classList.remove('hidden');
-        wasHidden.push(b);
-      }
-    });
+    // Sab sheets temporarily show karo capture ke liye
+    blocks.forEach(b => b.classList.remove('hidden'));
 
     try {
-      const doc    = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const pgW    = doc.internal.pageSize.getWidth();
-      const pgH    = doc.internal.pageSize.getHeight();
-      const margin = 12;
-      let   first  = true;
+      const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+      const pgW  = doc.internal.pageSize.getWidth();
+      const pgH  = doc.internal.pageSize.getHeight();
+      const margin = 8;
+      const contentTop = margin + 12;
+      const footerTop = pgH - margin + 1;
+      const contentH = footerTop - contentTop - 4;
+      let   isFirst = true;
 
-      const dateStr = new Date().toLocaleString('en-IN', {
-        day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: true
-      });
+      const now = new Date();
+      const dateStr = now.toLocaleString('en-IN',
+        {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
 
-      for (let i = 0; i < blocks.length; i++) {
-        const block     = blocks[i];
-        const sheetName = block.dataset.name || ('Sheet ' + (i + 1));
-        const pct       = Math.round((i / blocks.length) * 90);
+      for (let i=0; i<blocks.length; i++) {
+        const block = blocks[i];
+        const sheetName = block.dataset.sheetName || ('Sheet '+(i+1));
 
-        showModal(true, pct, `PDF बन रही है… (${i + 1}/${blocks.length})`, sheetName);
+        // Skip "not found" sheets
+        if (block.querySelector('.no-rows')) continue;
 
-        // Isolated wrapper for capture
+        showLoading(true, `PDF बन रही है… (${i+1}/${blocks.length}) — ${sheetName}`);
+
+        // Clone + isolate for capture
+        const colCount = Math.max(1, ...[...block.querySelectorAll('tr')].map(tr => tr.children.length));
+        const captureWidth = Math.min(Math.max(860, colCount * 92), 1700);
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = [
-          'position:absolute', 'top:-9999px', 'left:-9999px',
-          'width:1400px', 'background:#fff', 'padding:12px 16px',
-          "font-family:'Noto Sans Devanagari',Poppins,sans-serif",
-          'font-size:11px', 'color:#000'
-        ].join(';');
+        wrapper.className = 'pdf-capture-wrapper';
+        wrapper.style.cssText = `position:absolute;top:-9999px;left:-9999px;width:${captureWidth}px;background:white;padding:14px;font-family:Noto Sans Devanagari,Poppins,sans-serif;font-size:12px;`;
         wrapper.appendChild(block.cloneNode(true));
         document.body.appendChild(wrapper);
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r,150));
 
         let canvas = null;
         try {
           canvas = await html2canvas(wrapper, {
-            scale: 1.8, backgroundColor: '#ffffff',
-            logging: false, useCORS: true,
-            scrollX: 0, scrollY: 0
+            scale:1.8, backgroundColor:'#ffffff', logging:false, useCORS:true
           });
-        } catch (e) { console.error(e); }
+        } catch(e) { console.error(e); }
         document.body.removeChild(wrapper);
+
         if (!canvas) continue;
 
-        if (!first) doc.addPage();
-        first = false;
+        const imgData = canvas.toDataURL('image/jpeg', 0.94);
+        const availW = pgW - 2 * margin;
+        const imgW = availW;
+        const imgH = (canvas.height * imgW) / canvas.width;
+        const pageCount = Math.max(1, Math.ceil(imgH / contentH));
 
-        // Fit image to page
-        const imgData = canvas.toDataURL('image/jpeg', 0.92);
-        const availW  = pgW - 2 * margin;
-        const availH  = pgH - margin * 2 - 16;
-        const ratio   = canvas.width / canvas.height;
-        let iW = availW, iH = iW / ratio;
-        if (iH > availH) { iH = availH; iW = iH * ratio; }
-        const xOff = (pgW - iW) / 2;
+        for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+          if (!isFirst) doc.addPage();
+          isFirst = false;
 
-        doc.addImage(imgData, 'JPEG', xOff, margin + 12, iW, iH, undefined, 'FAST');
-
-        // Header
-        doc.setDrawColor(0); doc.setLineWidth(0.4);
-        doc.line(margin, margin + 3, pgW - margin, margin + 3);
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
-        doc.text('Swachh Bharat Mission (Gramin) — Block Level Report', pgW / 2, margin, { align: 'center' });
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-        doc.text(pdfTitle, margin, margin);
-        doc.text(dateStr, pgW - margin, margin, { align: 'right' });
-
-        // Footer
-        doc.setLineWidth(0.4);
-        doc.line(margin, pgH - margin + 1, pgW - margin, pgH - margin + 1);
-        doc.setFontSize(9);
-        doc.text(`${sheetName}  |  Page ${doc.getNumberOfPages()}`, pgW / 2, pgH - margin + 5, { align: 'center' });
+          const yOffset = contentTop - pageIndex * contentH;
+          doc.addImage(imgData, 'JPEG', margin, yOffset, imgW, imgH, undefined, 'FAST');
+          drawPdfChrome(doc, { pgW, pgH, margin, footerTop, sheetName, dateStr });
+        }
       }
 
-      showModal(true, 98, 'PDF save हो रही है…', '');
       doc.save(`${pdfTitle}.pdf`);
-      showModal(false);
 
-    } catch (err) {
+    } catch(err) {
       console.error(err);
-      showModal(false);
-      alert('PDF Error: ' + err.message);
+      alert('PDF बनाने में त्रुटि: ' + err.message);
     } finally {
+      showLoading(false);
       btn.disabled = false;
-      wasHidden.forEach(b => b.classList.add('hidden'));
-      showModal(false);
-      if (activeTab) showOnly(activeTab);
+      // Restore tab state
+      if (activeSheet) {
+        document.querySelectorAll('.sheet-block').forEach(b =>
+          b.classList.toggle('hidden', b.id !== 'sheet-'+activeSheet));
+      }
     }
   }
 
-  return { init, downloadPDF };
+  function drawPdfChrome(doc, { pgW, pgH, margin, footerTop, sheetName, dateStr }) {
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pgW, margin + 10, 'F');
+    doc.rect(0, footerTop - 1, pgW, pgH - footerTop + 1, 'F');
+
+    doc.setDrawColor(0); doc.setLineWidth(0.35);
+    doc.line(margin, margin + 4, pgW - margin, margin + 4);
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+    doc.text('Swachh Bharat Mission (Gramin) - Block Level Report', pgW/2, margin + 1, {align:'center'});
+
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text(pdfTitle, margin, margin + 1);
+    doc.text(dateStr, pgW - margin, margin + 1, {align:'right'});
+
+    doc.line(margin, footerTop, pgW - margin, footerTop);
+    doc.setFontSize(8);
+    doc.text(`${sheetName}  |  Page ${doc.getNumberOfPages()}`, pgW/2, footerTop + 5, {align:'center'});
+  }
+
+  function formatCell(value) {
+    const text = esc(String(value ?? ''));
+    return text.replace(/\r?\n/g, '<br>');
+  }
+
+  function cellClass(value) {
+    const text = String(value ?? '').trim();
+    const parts = [];
+    if (/^-?\d+(\.\d+)?%?$/.test(text.replace(/,/g, ''))) parts.push('num-cell');
+    if (looksLikeLegacyHindi(text)) parts.push('legacy-hindi');
+    return parts.join(' ');
+  }
+
+  function looksLikeLegacyHindi(text) {
+    if (!text || /[\u0900-\u097f]/.test(text)) return false;
+    return /[¼½¾]|Hkk|Lo|iz|fj|jk|xz|iap|;|ks|kk|vk|ls|esa|fy|Z/.test(text);
+  }
+
+  function esc(s) {
+    return String(s??'').replace(/[&<>"']/g, m =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  return { load, downloadPDF };
 })();
