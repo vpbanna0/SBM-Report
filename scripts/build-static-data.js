@@ -20,6 +20,13 @@ const ACCEPT = {
   imis: ['all ihhl data', 'all ihhl', 'ihhl data', 'imis data', 'ihhl'],
   csc: ['csc status', 'csc', 'iec csc', 'adarsh shauchalay', 'samudayik']
 };
+const BLOCK_TARGET_SHEETS = [
+  'Summary', 'ODF Plus', 'CSC 23-24', 'CSC 24-25', 'CSC 25-26',
+  'RRC Updated (4)', 'All IHHL Data Combine', 'Tender Report 25-26',
+  'Target AIP 26-27', 'AIP 26-27 Financial', 'Soak Pit 26-27',
+  'Compost Pit 26-27', 'Individual assest 26-27'
+];
+const BLOCK_HELPER_SHEETS = ['sheet_index'];
 
 function ensureConfiguredOneDriveSource() {
   if (!ONEDRIVE_SHARE_URL) {
@@ -170,11 +177,15 @@ async function downloadOneDriveBuffer() {
   throw new Error('OneDrive से फ़ाइल डाउनलोड नहीं हो सकी।');
 }
 
+function normalizeSheetName(name) {
+  return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function parseWorkbookBuffer(buffer) {
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false, cellStyles: true });
   const sheets = {};
   const sheetNames = [];
-  const toCompactRows = (sheet) => XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false })
+  const toCompactRows = (sheet) => XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false, raw: false })
     .map((row) => {
       let end = row.length;
       while (end > 0 && row[end - 1] === '') end -= 1;
@@ -199,7 +210,15 @@ function parseWorkbookBuffer(buffer) {
     addSheet(workbook.SheetNames.find((name) => ACCEPT[key].includes(name.trim().toLowerCase())));
   });
 
-  return { sheets, sheetNames };
+  BLOCK_HELPER_SHEETS.forEach((target) => {
+    addSheet(workbook.SheetNames.find((name) => normalizeSheetName(name) === normalizeSheetName(target)));
+  });
+
+  BLOCK_TARGET_SHEETS.forEach((target) => {
+    addSheet(workbook.SheetNames.find((name) => normalizeSheetName(name) === normalizeSheetName(target)));
+  });
+
+  return { sheets, sheetNames, blockTargetSheets: BLOCK_TARGET_SHEETS };
 }
 
 async function main() {
