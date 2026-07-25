@@ -181,9 +181,9 @@ async function downloadOneDriveBuffer(source) {
 }
 
 function parseWorkbookBuffer(buffer) {
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false, cellStyles: true });
   const sheets = {};
-  const toCompactRows = (sheet) => XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false })
+  const toCompactRows = (sheet) => XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false, raw: false })
     .map((row) => {
       let end = row.length;
       while (end > 0 && row[end - 1] === '') end -= 1;
