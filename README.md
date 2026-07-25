@@ -24,10 +24,6 @@ GitHub Pages is static hosting, so the published workbook snapshot becomes publi
 
 ## Block PDF generation
 
-The block PDF builder supports two engines:
+The block report does not need Azure, Microsoft Graph, or LibreOffice. The GitHub Actions workflow publishes the selected workbook sheets into `public/data/workbook.json`. The `block-report.html` page renders those target sheets as HTML tables in the browser and the PDF button converts that HTML to PDF with `html2canvas` + `jsPDF`.
 
-- `PDF_ENGINE=graph`: uses Microsoft Graph / Excel Online. This is the recommended mode when the PDF must match Excel/VBA rendering. Add delegated Graph credentials with `Files.ReadWrite` access using either `GRAPH_ACCESS_TOKEN`, or `MS_GRAPH_CLIENT_ID` + `MS_GRAPH_REFRESH_TOKEN` (+ `MS_GRAPH_CLIENT_SECRET` if your app uses one).
-- `PDF_ENGINE=auto`: tries Excel Online first when credentials are present, then falls back to LibreOffice.
-- `PDF_ENGINE=libreoffice`: forces the old LibreOffice path.
-
-For the correct VBA-style block report, set the repository variable `PDF_ENGINE` to `graph` and add the Graph secrets above. The script creates a temporary copy of the workbook, keeps only the desired report sheets visible, exports that copy to PDF through Excel Online, then deletes the temporary copy.
+Only the `ONEDRIVE_URL` secret is required for the GitHub Pages workflow.
