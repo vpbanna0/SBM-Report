@@ -28,49 +28,16 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install LibreOffice + UNO bridge + Hindi fonts
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y libreoffice libreoffice-calc python3-uno xvfb \
-            fonts-lohit-deva fonts-noto-core fonts-noto-extra --no-install-recommends
-          libreoffice --version
-
-      - name: Install custom legacy fonts (Kruti Dev / DevLys, if provided)
-        run: |
-          mkdir -p ~/.fonts
-          if [ -d "fonts" ]; then
-            cp fonts/*.ttf ~/.fonts/ 2>/dev/null || true
-            cp fonts/*.TTF ~/.fonts/ 2>/dev/null || true
-          fi
-          fc-cache -f -v
-
       - name: Install Node dependencies
         run: npm install
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
           PUPPETEER_SKIP_DOWNLOAD: true
 
-      - name: Install Python dependencies
-        run: pip install requests openpyxl --break-system-packages --quiet
-
-      - name: Build GP Report static data (workbook.json)
+      - name: Build workbook.json (all sheets)
         run: node scripts/build-static-data.js
         env:
           ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
-
-      - name: Build Block Report PDF (Excel Online, LibreOffice fallback)
-        timeout-minutes: 45
-        run: python3 -u scripts/build-block-pdf.py
-        env:
-          ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
-          PDF_ENGINE: ${{ vars.PDF_ENGINE || 'auto' }}
-          GRAPH_ACCESS_TOKEN: ${{ secrets.GRAPH_ACCESS_TOKEN }}
-          MS_GRAPH_TENANT: ${{ secrets.MS_GRAPH_TENANT }}
-          MS_GRAPH_CLIENT_ID: ${{ secrets.MS_GRAPH_CLIENT_ID }}
-          MS_GRAPH_CLIENT_SECRET: ${{ secrets.MS_GRAPH_CLIENT_SECRET }}
-          MS_GRAPH_REFRESH_TOKEN: ${{ secrets.MS_GRAPH_REFRESH_TOKEN }}
-          MS_GRAPH_SCOPES: ${{ secrets.MS_GRAPH_SCOPES }}
-          PYTHONUNBUFFERED: "1"
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
