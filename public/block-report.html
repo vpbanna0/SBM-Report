@@ -6,48 +6,55 @@
   <title>Block SBM Report</title>
   <link rel="stylesheet" href="block-report.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
   <div class="header no-print">
     <div class="header-left">
       <div class="header-title">📊 Block SBM Report</div>
-      <div class="header-sub">Swachh Bharat Mission (Gramin) — Block Level</div>
+      <div class="header-sub">Swachh Bharat Mission (Gramin) — Block Level Summary</div>
     </div>
     <div class="header-right">
       <a href="index.html" class="btn btn-back">← GP Report</a>
       <button id="btnPDF" class="btn btn-pdf" onclick="BlockReport.downloadPDF()" disabled>⬇️ PDF डाउनलोड</button>
+      <button class="btn btn-load" onclick="BlockReport.load()">↻ डेटा री-लोड</button>
     </div>
   </div>
 
   <div class="status-bar no-print">
-    <span id="statusMsg" class="status-pill">डेटा लोड हो रहा है…</span>
-    <span id="pdfBadge" class="pdf-badge" style="display:none"></span>
+    <span id="statusMsg" class="status-pill loading">डेटा लोड हो रहा है...</span>
+    <span id="pdfNameBadge" class="pdf-name-badge" style="display:none"></span>
   </div>
 
   <div id="sheetTabs" class="sheet-tabs no-print" style="display:none"></div>
 
-  <div id="reportContent" class="report-content">
+  <div class="print-header print-only">
+    <div class="ph-title">Swachh Bharat Mission (Gramin) — Block Level Report</div>
+    <div class="ph-meta">
+      <span id="printPdfName">Block SBM Report</span>
+      <span id="printDate"></span>
+    </div>
+  </div>
+
+  <main id="reportContent" class="report-content">
     <div class="placeholder">
-      <div class="placeholder-icon">⏳</div>
-      <div class="placeholder-text">डेटा लोड हो रहा है…</div>
+      <div class="placeholder-icon">📄</div>
+      <div class="placeholder-text">Block report data load ho raha hai...</div>
     </div>
-  </div>
+  </main>
 
-  <div id="pdfModal" class="pdf-modal" style="display:none">
-    <div class="pdf-modal-box">
+  <div id="loadingOverlay" class="loading-overlay" style="display:none">
+    <div class="loading-box">
       <div class="spinner"></div>
-      <div id="pdfModalTitle" class="modal-title">PDF बन रही है…</div>
-      <div id="pdfModalSub"   class="modal-sub">कृपया प्रतीक्षा करें</div>
-      <div class="progress-bar-wrap">
-        <div id="pdfProgressBar" class="progress-bar" style="width:0%"></div>
-      </div>
+      <div id="loadingMsg" class="loading-msg">PDF बन रही है...</div>
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="block-report.js"></script>
-  <script>window.addEventListener('load', () => BlockReport.init());</script>
+  <script>
+    window.addEventListener('load', () => BlockReport.load());
+  </script>
 </body>
 </html>
