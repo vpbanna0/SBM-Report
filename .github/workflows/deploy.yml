@@ -34,7 +34,7 @@ jobs:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
           PUPPETEER_SKIP_DOWNLOAD: true
 
-      - name: Build workbook.json (all sheets)
+      - name: Build GP Report static data (workbook.json)
         run: node scripts/build-static-data.js
         env:
           ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
