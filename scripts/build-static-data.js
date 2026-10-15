@@ -6,15 +6,19 @@ const crypto = require('crypto');
 const fetch = require('node-fetch');
 const XLSX = require('xlsx');
 
-/* ═══════════════════════════════════════════════════════════════
-   CONFIG — Google Drive source (OneDrive पूरी तरह हटा दिया गया है)
-═══════════════════════════════════════════════════════════════ */
+// Supports both build-block-report.js and build_block_report.js
+let blockMod = null;
+try {
+  blockMod = require('./build-block-report');
+} catch (_) {
+  try {
+    blockMod = require('./build_block_report');
+  } catch (__) {}
+}
+
 const GOOGLE_DRIVE_FILE_ID = process.env.GOOGLE_DRIVE_FILE_ID || '1mW76gRlKc5P2h9svnjbGKdHj5AeXrHc3';
 
-// Bade / macro-enabled (.xlsm) files पर Google का "can't scan for viruses"
-// warning page आ जाता है, इसलिए पहले direct usercontent endpoint try करते हैं।
 const PRIMARY_DOWNLOAD_URL = `https://drive.usercontent.google.com/download?id=${GOOGLE_DRIVE_FILE_ID}&export=download&confirm=t`;
-// Fallback: पुराना classic uc?export=download endpoint (confirm-token retry सहित)।
 const FALLBACK_DOWNLOAD_URL = `https://drive.google.com/uc?export=download&id=${GOOGLE_DRIVE_FILE_ID}`;
 
 const OUTPUT_DIR = path.join(__dirname, '..', 'public', 'data');
@@ -27,8 +31,6 @@ const BROWSER_HEADERS = {
   accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
 };
 
-// Workbook में sheet नाम अलग-अलग casing/spelling में हो सकते हैं,
-// इसलिए हर business-sheet के लिए accepted aliases रखे गए हैं।
 const ACCEPT = {
   census: ['census', 'census data'],
   ration: ['ration hh', 'ration', 'ration hh data', 'ration card'],
@@ -43,9 +45,6 @@ const SHEET_LABELS = {
   csc: 'CSC Status'
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   Google Drive download helpers
-═══════════════════════════════════════════════════════════════ */
 function updateCookieJar(jar, response) {
   const setCookies = (response.headers.raw && response.headers.raw()['set-cookie']) || [];
   setCookies.forEach((header) => {
@@ -63,9 +62,6 @@ function getCookieHeader(jar) {
     .join('; ');
 }
 
-// ज़िप-आधारित फ़ाइलों (.xlsx/.xlsm दोनों असल में ZIP container हैं) का
-// magic header "PK" (0x50 0x4B) से शुरू होता है। Google का HTML error/redirect
-// page कभी भी इस header से match नहीं करेगा, इसलिए यह एक भरोसेमंद गार्ड है।
 function hasZipMagicHeader(buffer) {
   return (
     Buffer.isBuffer(buffer) &&
@@ -111,11 +107,6 @@ function extractConfirmParams(html) {
   };
 }
 
-/**
- * Google Drive से .xlsm workbook download करता है।
- * हर response को magic header (PK\x03\x04) से verify करता है ताकि
- * कोई HTML warning/redirect page गलती से workbook.json को corrupt न करे।
- */
 async function downloadGoogleDriveWorkbook() {
   if (!GOOGLE_DRIVE_FILE_ID) {
     throw new Error('Missing GOOGLE_DRIVE_FILE_ID. Set it as an environment variable / GitHub Actions secret.');
@@ -124,8 +115,6 @@ async function downloadGoogleDriveWorkbook() {
   const cookieJar = {};
   const attempts = [];
 
-  // Attempt 1: usercontent.google.com direct endpoint — बड़ी / macro-enabled
-  // files के लिए virus-scan interstitial को अक्सर bypass कर देता है।
   try {
     const buffer = await fetchAsBuffer(PRIMARY_DOWNLOAD_URL, cookieJar);
     if (hasZipMagicHeader(buffer)) return buffer;
@@ -134,7 +123,6 @@ async function downloadGoogleDriveWorkbook() {
     attempts.push(`primary (drive.usercontent.google.com): ${err.message}`);
   }
 
-  // Attempt 2: classic uc?export=download, ज़रूरत पड़ने पर confirm-token के साथ retry।
   try {
     const buffer = await fetchAsBuffer(FALLBACK_DOWNLOAD_URL, cookieJar);
     if (hasZipMagicHeader(buffer)) return buffer;
@@ -166,9 +154,6 @@ async function downloadGoogleDriveWorkbook() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Workbook parsing (Hindi / Kruti Dev 010 / multi-row headers)
-═══════════════════════════════════════════════════════════════ */
 function toCompactRows(sheet) {
   return XLSX.utils
     .sheet_to_json(sheet, { header: 1, defval: '', blankrows: false })
@@ -180,12 +165,6 @@ function toCompactRows(sheet) {
     .filter((row) => row.some((cell) => cell !== '' && cell !== null));
 }
 
-/**
- * Sirf main SBM Report dashboard ke liye zaroori sheets nikalta hai:
- * Census, Ration HH, All IHHL Data, CSC Status.
- * Cell ka raw structure (Hindi / Kruti Dev 010 text, multi-row headers)
- * bina bigade array-of-arrays ke roop mein rakha jaata hai.
- */
 function parseWorkbookBuffer(buffer) {
   const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false });
   const sheets = {};
@@ -218,12 +197,8 @@ function parseWorkbookBuffer(buffer) {
   };
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   IST timestamp helpers
-═══════════════════════════════════════════════════════════════ */
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
-// ISO string, लेकिन wall-clock IST time के हिसाब से, +05:30 suffix के साथ।
 function toISTISOString(date = new Date()) {
   const shifted = new Date(date.getTime() + IST_OFFSET_MS);
   return shifted.toISOString().replace('Z', '+05:30');
@@ -242,9 +217,6 @@ function formatISTDisplay(date = new Date()) {
   });
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Snapshot build + write (server.js भी इन्हें reuse करता है)
-═══════════════════════════════════════════════════════════════ */
 async function buildWorkbookSnapshot() {
   const buffer = await downloadGoogleDriveWorkbook();
   const { sheets, sheetNames, sourceWorkbookSheetNames, missingKeys } = parseWorkbookBuffer(buffer);
@@ -276,27 +248,39 @@ async function buildWorkbookSnapshot() {
     }
   };
 
-  return { payload, buffer };
+  let blockPayload = null;
+  if (blockMod && typeof blockMod.buildBlockReportSnapshot === 'function') {
+    const res = await blockMod.buildBlockReportSnapshot(buffer);
+    blockPayload = res.payload;
+  }
+
+  return { payload, blockPayload, buffer };
 }
 
-async function writeSnapshotToDisk(payload) {
+async function writeSnapshotToDisk(payload, blockPayload = null) {
   await fs.mkdir(OUTPUT_DIR, { recursive: true });
   const json = JSON.stringify(payload);
   await fs.writeFile(OUTPUT_FILE, json, 'utf8');
+  if (blockPayload && blockMod && typeof blockMod.writeBlockReportToDisk === 'function') {
+    await blockMod.writeBlockReportToDisk(blockPayload);
+  }
   await fs.writeFile(NOJEKYLL_FILE, '');
   return json;
 }
 
 async function main() {
   console.log(`⬇️  Google Drive से workbook download हो रही है (file ID: ${GOOGLE_DRIVE_FILE_ID})...`);
-  const { payload } = await buildWorkbookSnapshot();
-  const json = await writeSnapshotToDisk(payload);
+  const { payload, blockPayload } = await buildWorkbookSnapshot();
+  const json = await writeSnapshotToDisk(payload, blockPayload);
 
   const sizeMb = (Buffer.byteLength(json) / (1024 * 1024)).toFixed(2);
-  console.log(`✅ Snapshot लिखा गया: ${OUTPUT_FILE} (${sizeMb} MB)`);
-  console.log(`   Sheets मिलीं: ${payload.sheetNames.join(', ')}`);
+  console.log(`✅ GP Snapshot लिखा गया: ${OUTPUT_FILE} (${sizeMb} MB)`);
+  console.log(`   GP Sheets मिलीं: ${payload.sheetNames.join(', ')}`);
+  if (blockPayload) {
+    console.log(`✅ Block Report लिखा गया (PDF Name: ${blockPayload.pdfName}.pdf, Sheets: ${blockPayload.sheets.length})`);
+  }
   if (payload.meta.missingSheets.length) {
-    console.warn(`   ⚠️  ये sheets नहीं मिलीं: ${payload.meta.missingSheets.join(', ')}`);
+    console.warn(`   ⚠️  ये GP sheets नहीं मिलीं: ${payload.meta.missingSheets.join(', ')}`);
   }
   console.log(`   Last updated (IST): ${payload.meta.lastUpdatedDisplay}`);
 }
