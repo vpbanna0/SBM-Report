@@ -5,8 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Har ghante — GitHub ke 60-day inactivity limit se bachne ke liye
-    # yeh workflow khud hi naya data commit karta rahega (neeche dekhein).
     - cron: '0 * * * *'
 
 permissions:
@@ -39,30 +37,31 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Build latest workbook.json from Google Drive
-        run: npm run build:data
+      - name: Build latest workbook.json & block-report.json from Google Drive
+        run: |
+          npm run build:data
+          if [ ! -f public/data/block-report.json ]; then
+            node scripts/build-block-report.js || node scripts/build_block_report.js
+          fi
         env:
-          # Optional override — repo ke Settings > Secrets and variables mein
-          # GOOGLE_DRIVE_FILE_ID set karke file badle bina hi source badal sakte hain.
           GOOGLE_DRIVE_FILE_ID: ${{ vars.GOOGLE_DRIVE_FILE_ID }}
 
       - name: Ensure GitHub Pages does not run Jekyll
         run: touch public/.nojekyll
 
-      - name: Commit updated workbook.json (agar naya data aaya ho)
+      - name: Commit updated workbook.json & block-report.json (agar naya data aaya ho)
         id: commit_data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          if ! git diff --quiet -- public/data/workbook.json; then
-            git add public/data/workbook.json
-            # [skip ci] taaki yeh khud ka commit dobara "push" trigger na chalaye (infinite loop se bachne ke liye).
-            git commit -m "chore: auto-update workbook.json data snapshot [skip ci]"
+          git add public/data/workbook.json public/data/block-report.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: auto-update workbook.json & block-report.json data snapshot [skip ci]"
             git push origin HEAD:${{ github.ref_name }}
             echo "updated=true" >> "$GITHUB_OUTPUT"
           else
-            echo "No data changes detected in workbook.json, skipping commit."
+            echo "No data changes detected, skipping commit."
             echo "updated=false" >> "$GITHUB_OUTPUT"
           fi
 
