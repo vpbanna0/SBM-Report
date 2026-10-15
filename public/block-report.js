@@ -1,27 +1,234 @@
 ```javascript
-/**
- * block-report.js (or block_report.js)
- * ═══════════════════════════════════════════════════════════════════════════
- * Client-Side Block Report Renderer & Exact Excel-Format PDF Exporter
- * Replicates the Excel VBA macro `Sub SaveSheetsAsPDF()`:
- *  - Reads PDF filename from `Sheet_Index!I2`
- *  - Exports all 14 sheets (19 pages total) in exact Excel print format:
- *    * Pages 1–2:   Summary (A4 Portrait, split after CSC 2024-25)
- *    * Page 3:      ODF Plus (A4 Landscape)
- *    * Pages 4–7:   CSC 23-24, CSC 24-25, CSC 25-26, CSC 26-27 (A4 Landscape)
- *    * Page 8:      RRC Updated (4) (A4 Landscape)
- *    * Page 9:      All IHHL Data Combine (A4 Landscape, 21 cols full-width)
- *    * Page 10:     Tender Report 26-27 (A4 Landscape)
- *    * Page 11:     Target AIP 26-27 (A4 Landscape, 18 cols)
- *    * Pages 12–13: AIP 26-27 Financial (A4 Landscape, 2 stacked tables)
- *    * Page 14:     Soak Pit 26-27 (A4 Landscape)
- *    * Page 15:     Compost Pit 26-27 (A4 Landscape)
- *    * Pages 16–19: Individual assest 26-27 (A4 Landscape, 4 stacked tables)
- * ═══════════════════════════════════════════════════════════════════════════
- */
-(function (root) {
+;(function (root) {
   'use strict';
 
+  /* ═══════════════════════════════════════════════════════════════════════════
+     PART 1: Kruti Dev (010/011/016) & DevLys (010/020) → Unicode Converter
+     (Built directly into block-report.js so it works even standalone!)
+  ═══════════════════════════════════════════════════════════════════════════ */
+  const ARRAY_ONE = [
+    'ñ', 'Q+Z', 'sas', 'aa', ')Z', 'ZZ', '‘', '’', '“', '”',
+    'å', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹',
+    '¶+', 'd+', '[+k', '[+', 'x+', 'T+', 't+', 'M+', '<+', 'Q+', ';+', 'j+', 'u+',
+    'Ùk', 'Ù', 'ä', '–', '—', 'é', '™', '=kk', 'f=k',
+    'à', 'á', 'â', 'ã', 'ºz', 'º', 'í', '{k', '{', '=', '«',
+    'Nî', 'Vî', 'Bî', 'Mî', '<î', '|', 'K', '}',
+    'J', 'Vª', 'Mª', '<ªª', 'Nª', 'Ø', 'Ý', 'nzZ', 'æ', 'ç', 'Á', 'xz', '#', ':',
+    'v‚', 'vkW', 'vks', 'vkS', 'vk', 'v', 'b±', 'Ã', 'bZ', 'b', 'm', 'Å', ',s', ',', '_',
+    'ô', 'd', 'Dk', 'D', '[k', '[', 'x', 'Xk', 'X', '?k', '?', '³',
+    'pkS', 'p', 'Pk', 'P', 'N', 't', 'Tk', 'T', '>', '÷', '¥',
+    'ê', 'ë', 'V', 'B', 'ì', 'ï', 'M+', '<+', 'M', '<', '.k', '.',
+    'r', 'Rk', 'R', 'Fk', 'F', ')', 'n', '/k', 'धk', '/', 'Ë', 'è', 'u', 'Uk', 'U',
+    'i', 'Ik', 'I', 'Q', '¶', 'c', 'Ck', 'C', 'Hk', 'H', 'e', 'Ek', 'E',
+    ';', '¸', 'j', 'y', 'Yk', 'Y', 'G', 'o', 'Ok', 'O',
+    "'k", "'", '"k', '"', 'l', 'Lk', 'L', 'g',
+    'È', 'z',
+    'Ì', 'Í', 'Î', 'Ï', 'Ñ', 'Ò', 'Ó', 'Ô', 'Ö', 'Ø', 'Ù', 'Ük', 'Ü',
+    '‚', 'kW', 'ks', 'kS', 'k', 'h', 'q', 'w', '`', 's', 'S',
+    'a', '¡', '%', 'W', '•', '·', '∙', '·', '~j', '~', '\\', '+', ' ः',
+    '^', '*', 'Þ', 'ß', '(', '¼', '½', '¿', 'À', '¾', 'A', '-', '&', '&', 'Œ', ']', '~ ', '@'
+  ];
+
+  const ARRAY_TWO = [
+    '॰', 'QZ+', 'sa', 'a', 'र्द्ध', 'Z', '"', '"', "'", "'",
+    '०', '१', '२', '३', '४', '५', '६', '७', '८', '९',
+    'फ़्', 'क़', 'ख़', 'ख़्', 'ग़', 'ज़्', 'ज़', 'ड़', 'ढ़', 'फ़', 'य़', 'ऱ', 'ऩ',
+    'त्त', 'त्त्', 'क्त', 'दृ', 'कृ', 'न्न', 'न्न्', '=k', 'f=',
+    'ह्न', 'ह्य', 'हृ', 'ह्म', 'ह्र', 'ह्', 'द्द', 'क्ष', 'क्ष्', 'त्र', 'त्र्',
+    'छ्य', 'ट्य', 'ठ्य', 'ड्य', 'ढ्य', 'द्य', 'ज्ञ', 'द्व',
+    'श्र', 'ट्र', 'ड्र', 'ढ्र', 'छ्र', 'क्र', 'फ्र', 'र्द्र', 'द्र', 'प्र', 'प्र', 'ग्र', 'रु', 'रू',
+    'ऑ', 'ऑ', 'ओ', 'औ', 'आ', 'अ', 'ईं', 'ई', 'ई', 'इ', 'उ', 'ऊ', 'ऐ', 'ए', 'ऋ',
+    'क्क', 'क', 'क', 'क्', 'ख', 'ख्', 'ग', 'ग', 'ग्', 'घ', 'घ्', 'ङ',
+    'चौ', 'च', 'च', 'च्', 'छ', 'ज', 'ज', 'ज्', 'झ', 'झ्', 'ञ',
+    'ट्ट', 'ट्ठ', 'ट', 'ठ', 'ड्ड', 'ड्ढ', 'ड़', 'ढ़', 'ड', 'ढ', 'ण', 'ण्',
+    'त', 'त', 'त्', 'थ', 'थ्', 'द्ध', 'द', 'ध', 'ध', 'ध्', 'ध्', 'ध्', 'न', 'न', 'न्',
+    'प', 'प', 'प्', 'फ', 'फ्', 'ब', 'ब', 'ब्', 'भ', 'भ्', 'म', 'म', 'म्',
+    'य', 'य्', 'र', 'ल', 'ल', 'ल्', 'ळ', 'व', 'व', 'व्',
+    'श', 'श्', 'ष', 'ष्', 'स', 'स', 'स्', 'ह',
+    'ीं', '्र',
+    'द्द', 'ट्ट', 'ट्ठ', 'ड्ड', 'कृ', 'भ', '्य', 'ड्ढ', 'झ्', 'क्र', 'त्त्', 'श', 'श्',
+    'ॉ', 'ॉ', 'ो', 'ौ', 'ा', 'ी', 'ु', 'ू', 'ृ', 'े', 'ै',
+    'ं', 'ँ', 'ः', 'ॅ', 'ऽ', 'ऽ', 'ऽ', 'ऽ', '्र', '्', '?', '़', ':',
+    '‘', '’', '“', '”', ';', '(', ')', '{', '}', '=', '।', '.', '-', 'µ', '॰', ',', '् ', '/'
+  ];
+
+  const KNOWN_ENGLISH_WORDS = new Set([
+    'nlb', 'ihhl', 'to', 'new', 'consolidate', 'consolidated', 'report', 'success',
+    'pending', 'at', 'jta', 'as', 'due', 'vdo', 'land', 'allotment', 'work', 'ts', 'fs',
+    'sbm', 'odf', 'plus', 'csc', 'rrc', 'aip', 'gp', 'ps', 'uc', 'bpl', 'apl', 'lwm', 'swm',
+    'ffc', 'nrega', 'green', 'yello', 'yellow', 'red', 'zone', 'zones', 'total', 'sr', 'no',
+    'sno', 'target', 'sanctioned', 'geo', 'tagged', 'tag', 'paid', 'payment', 'percantage',
+    'percentage', 'aspiring', 'rising', 'model', 'village', 'door', 'collection', 'year',
+    'complete', 'completed', 'geotagged', 'sanction', 'issued', 'cancelled', 'not', 'start',
+    'in', 'progress', 'plinth', 'level', 'lintle', 'lintel', 'roof', 'final', 'form',
+    'propsal', 'proposal', 'sent', 'sdm', 'office', 'allotted', 'under', 'construction',
+    'head', 'name', 'of', 'physical', 'status', 'financial', 'expenditure', 'from', 'average',
+    'block', 'overall', 'achievement', 'date', 'tendor', 'tender', 'open', 'firm', 'rate',
+    'owner', 'mobile', 'order', 'timeline', 'amount', 'yes', 'soak', 'pit', 'compost',
+    'individual', 'assest', 'asset', 'combine', 'category', 'done', 'offline', 'online',
+    'bsr', 'cancel', 'deogarh', 'rajsamand',
+    'april', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
+  ]);
+
+  function looksLikeKrutiDev(text) {
+    if (text == null) return false;
+    const s = String(text).trim();
+    if (!s) return false;
+    const hasDevanagari = /[\u0900-\u097F]/.test(s);
+    if (/[Øç¼½±ÆÇÉÊÙ]/.test(s)) return true;
+    if (/fnukad|iapk;r|xzke|'kkSpky;|fuekZ\.k|LoPN|fjiksVZ|lfefr|nsox<\+|jktleUn|;ksx|Hkqxrku|fcykuke|vkaxuokM|lkeqnkf;d|ekWfuVfjax|dkWih|vkWuykbZu/.test(s)) {
+      return true;
+    }
+    if (hasDevanagari) return false;
+    const krutiTokens = [
+      /\b(ds|dk|dh|esa|ls|ij|gS|gSa|ugha|rFkk|,oa|Jh|xzke|iapk;r|dk;Z|lfefr|ftyk|fodkl|LoPN|Hkkjr|fe'ku|çxfr|fjiksVZ|fnukad|;ksx|dqy|y{;|Loh—r|Hkqxrku|fcykuke|dkWih|vkWuykbZu|odZ|vkWMZj|Vs\.Mj)\b/,
+      /[a-zA-Z]\+[a-zA-Z]?/,
+      /[a-zA-Z];[a-zA-Z]/,
+      /'kk|"kk|ksM\+|kSM\+|pkS|fd;k|x;k|tkjh|orZeku/
+    ];
+    return krutiTokens.some((re) => re.test(s));
+  }
+
+  function rawKrutiToUnicode(input) {
+    if (input == null || input === '') return '';
+    let modified = String(input);
+
+    for (let i = 0; i < ARRAY_ONE.length; i++) {
+      const from = ARRAY_ONE[i];
+      const to = ARRAY_TWO[i];
+      let idx = modified.indexOf(from);
+      while (idx !== -1) {
+        modified = modified.replace(from, to);
+        idx = modified.indexOf(from);
+      }
+    }
+
+    modified = modified.replace(/±/g, 'Zं');
+    modified = modified.replace(/Æ/g, 'र्f');
+
+    let posI = modified.indexOf('f');
+    while (posI !== -1) {
+      const nextChar = modified.charAt(posI + 1);
+      if (!nextChar) break;
+      modified = modified.replace('f' + nextChar, nextChar + 'ि');
+      posI = modified.indexOf('f', posI + 1);
+    }
+
+    modified = modified.replace(/Ç/g, 'fa');
+    modified = modified.replace(/É/g, 'र्fa');
+
+    posI = modified.indexOf('fa');
+    while (posI !== -1) {
+      const nextChar = modified.charAt(posI + 2);
+      if (!nextChar) break;
+      modified = modified.replace('fa' + nextChar, nextChar + 'िं');
+      posI = modified.indexOf('fa', posI + 2);
+    }
+
+    modified = modified.replace(/Ê/g, 'ीZ');
+
+    let posWrongEe = modified.indexOf('ि्');
+    while (posWrongEe !== -1) {
+      const consNext = modified.charAt(posWrongEe + 2);
+      if (!consNext) break;
+      modified = modified.replace('ि्' + consNext, '्' + consNext + 'ि');
+      posWrongEe = modified.indexOf('ि्', posWrongEe + 2);
+    }
+
+    const matras = 'अ आ इ ई उ ऊ ए ऐ ओ औ ऑ ा ि ी ु ू ृ े ै ो ौ ॉ ं : ँ ॅ';
+    let posR = modified.indexOf('Z');
+    let safety = 0;
+    while (posR > 0 && safety < 500) {
+      safety++;
+      let probPos = posR - 1;
+      let ch = modified.charAt(probPos);
+      while (probPos > 0 && matras.indexOf(ch) !== -1) {
+        probPos -= 1;
+        ch = modified.charAt(probPos);
+      }
+      while (probPos >= 2 && modified.charAt(probPos - 1) === '्') {
+        probPos -= 2;
+      }
+      const target = modified.substring(probPos, posR);
+      modified =
+        modified.substring(0, probPos) +
+        'र्' +
+        target +
+        modified.substring(posR + 1);
+      posR = modified.indexOf('Z');
+    }
+
+    modified = modified.replace(/आॅ/g, 'ऑ').replace(/ाॅ/g, 'ॉ').replace(/अा/g, 'आ');
+    modified = modified.replace(/दिनांक:-/g, 'दिनांक :-');
+    return modified;
+  }
+
+  function isPureEnglishOrCodeToken(token) {
+    const t = token.trim();
+    if (!t) return true;
+    if (/^[₹$0-9.,%+\-*/()=\s:]+$/.test(t)) return true;
+    if (/^(Work|AS|TS|FS|SPL|Spl)\s*[/\-]\s*[0-9]/i.test(t)) return true;
+    const clean = t.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '').toLowerCase();
+    if (clean && KNOWN_ENGLISH_WORDS.has(clean) && !/[;+Øç¼½]/.test(t)) {
+      return true;
+    }
+    return false;
+  }
+
+  function convertTextSmart(text, forceKruti = false) {
+    if (text == null || text === '') return '';
+    if (typeof text === 'number' || typeof text === 'boolean') return String(text);
+
+    const str = String(text).replace(/आॅ/g, 'ऑ').replace(/ाॅ/g, 'ॉ').replace(/अा/g, 'आ');
+    if (/^[\d\s.,%+\-*/():₹]+$/.test(str.trim())) return str;
+    if (/^(Work|AS|TS|FS|SPL|Spl)\s*[/\-]\s*\d/i.test(str.trim())) return str;
+    if (/^(Pending At JTA|Pending At VDO|AS Due at VDO|Land Allotment Due|Complete|Work In Progress|Cancelled|Not Start|Plinth Level|Lintle Level|Roof Level|Done|Due|Yes|No|Total|TOTAL|Green Zone|Yello Zone|Yellow Zone|Red Zone|BSR|AS Due|TS Due|No Target)$/i.test(str.trim())) {
+      return str;
+    }
+
+    const shouldConvert = forceKruti || looksLikeKrutiDev(str);
+    if (!shouldConvert) return str;
+
+    return str
+      .split(/\r?\n/)
+      .map((line) => {
+        if (!line.trim()) return line;
+        const parts = line.match(/\S+|\s+/g) || [line];
+        const segments = [];
+        for (const part of parts) {
+          if (/^\s+$/.test(part)) {
+            if (segments.length > 0) {
+              segments[segments.length - 1].text += part;
+            } else {
+              segments.push({ isEng: true, text: part });
+            }
+            continue;
+          }
+          const isEng = isPureEnglishOrCodeToken(part);
+          if (segments.length > 0 && segments[segments.length - 1].isEng === isEng) {
+            segments[segments.length - 1].text += part;
+          } else {
+            segments.push({ isEng, text: part });
+          }
+        }
+        return segments
+          .map((seg) => (seg.isEng ? seg.text : rawKrutiToUnicode(seg.text)))
+          .join('');
+      })
+      .join('\n');
+  }
+
+  if (!root.KrutiDevConverter) {
+    root.KrutiDevConverter = {
+      looksLikeKrutiDev,
+      rawKrutiToUnicode,
+      convertTextSmart
+    };
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     PART 2: 14-Sheet / 19-Page Block Report Renderer & PDF Exporter
+  ═══════════════════════════════════════════════════════════════════════════ */
   const BLOCK_REPORT_SHEETS = [
     'Summary',
     'ODF Plus',
@@ -113,10 +320,7 @@
   function ensureUnicodeText(text, forceKruti = false) {
     if (text === null || text === undefined || text === '') return '';
     let s = String(text).replace(/आॅ/g, 'ऑ').replace(/ाॅ/g, 'ॉ').replace(/अा/g, 'आ');
-    if (root.KrutiDevConverter) {
-      s = root.KrutiDevConverter.convertTextSmart(s, forceKruti);
-    }
-    return s.replace(/आॅ/g, 'ऑ').replace(/ाॅ/g, 'ॉ').replace(/अा/g, 'आ');
+    return convertTextSmart(s, forceKruti).replace(/आॅ/g, 'ऑ').replace(/ाॅ/g, 'ॉ').replace(/अा/g, 'आ');
   }
 
   async function loadBlockReportData(forceServerRefresh = false) {
@@ -160,7 +364,6 @@
 
     const nameNorm = sheet.name.trim().toLowerCase();
 
-    // 1. Summary sheet: Portrait (2 pages — split right before CSC Progress Year 2025-26)
     if (nameNorm === 'summary') {
       let splitIdx = rows.findIndex((r) =>
         (r.cells || []).some((c) => String(c.v || '').includes('2025-26') && String(c.v || '').includes('CSC'))
@@ -208,7 +411,6 @@
 
     const orientation = sheet.orientation === 'portrait' ? 'portrait' : 'landscape';
 
-    // 2. Stacked multi-table sheets (AIP 26-27 Financial [2 tables], Individual assest 26-27 [4 tables])
     const tableBlocks = [];
     let blockStart = 0;
 
@@ -242,7 +444,6 @@
       }));
     }
 
-    // 3. Single-table sheet: fits on 1 page
     return [
       {
         sheetName: sheet.name,
@@ -355,226 +556,4 @@
         const isBorderless = !cell.bd && !cell.bg;
 
         if (hasText && isBorderless && (!cell.cs || cell.cs === 1) && (!cell.rs || cell.rs === 1)) {
-          let extraSpan = 0;
-          while (cIdx + 1 < rawCells.length) {
-            const nextC = rawCells[cIdx + 1];
-            const nextEmpty = !nextC.v || String(nextC.v).trim() === '';
-            const nextBorderless = !nextC.bd && !nextC.bg && (!nextC.rs || nextC.rs === 1) && (!nextC.cs || nextC.cs === 1);
-            const expectedNextCol = cell.c + extraSpan + 1;
-            if (nextEmpty && nextBorderless && nextC.c === expectedNextCol) {
-              extraSpan++;
-              cIdx++;
-            } else {
-              break;
-            }
-          }
-          if (extraSpan > 0) {
-            cell.cs = 1 + extraSpan;
-          }
-        }
-
-        processedCells.push(cell);
-      }
-
-      const rowIsTotal = isTotalRow(row);
-      const rowStyle = row.ht && !isDenseSheet ? `style="min-height:${Math.round(row.ht * 1.05)}px"` : '';
-      html += `<tr ${rowStyle}>`;
-
-      for (const cell of processedCells) {
-        const attrs = [];
-        if (cell.rs && cell.rs > 1) attrs.push(`rowspan="${cell.rs}"`);
-        if (cell.cs && cell.cs > 1) attrs.push(`colspan="${cell.cs}"`);
-
-        const rawText = ensureUnicodeText(cell.v ?? '');
-        const trimmedText = rawText.trim();
-
-        const styles = [];
-        if (cell.bd) {
-          const [bt, br, bb, bl] = cell.bd;
-          styles.push(`border-top:${bt ? '1px solid #000' : 'none'}`);
-          styles.push(`border-right:${br ? '1px solid #000' : 'none'}`);
-          styles.push(`border-bottom:${bb ? '1px solid #000' : 'none'}`);
-          styles.push(`border-left:${bl ? '1px solid #000' : 'none'}`);
-        } else {
-          styles.push('border:none');
-        }
-
-        let bg = cell.bg || null;
-        if (isIhhlCombine && rIdx >= 5 && !rowIsTotal) {
-          if (cell.c === 12 && trimmedText === '0') {
-            bg = bg || '#00B050';
-          } else if ((cell.c === 17 || cell.c === 16) && /^-\d/.test(trimmedText)) {
-            bg = bg || '#ED7D31';
-          }
-        }
-
-        if (bg) styles.push(`background-color:${bg}`);
-        if (cell.fg) styles.push(`color:${cell.fg}`);
-
-        if (cell.sz) {
-          if (cell.sz >= 30) {
-            styles.push('font-size:26px;line-height:1.2;padding:4px 4px');
-          } else if (cell.sz >= 17) {
-            styles.push('font-size:18px;line-height:1.2;padding:4px 4px');
-          } else if (cell.sz >= 15) {
-            styles.push('font-size:15px;line-height:1.2');
-          } else if (cell.sz >= 13.5) {
-            styles.push(`font-size:${isDenseSheet ? 11.5 : 13.5}px;line-height:1.2`);
-          } else if (cell.sz <= 9) {
-            styles.push('font-size:9.5px');
-          } else {
-            styles.push(`font-size:${baseFontPx}px`);
-          }
-        } else {
-          styles.push(`font-size:${baseFontPx}px`);
-        }
-
-        if (cell.b || rowIsTotal) styles.push('font-weight:700');
-        if (cell.i) styles.push('font-style:italic');
-        if (cell.st) styles.push('text-decoration:line-through');
-
-        const hAlign = cell.al || 'left';
-        styles.push(`text-align:${hAlign}`);
-        const vAlign = cell.val || 'middle';
-        styles.push(`vertical-align:${vAlign === 'center' ? 'middle' : vAlign}`);
-
-        const isNumberOrPct = /^-?[\d,]+(\.\d+)?%?$/.test(trimmedText);
-        const isSingleWordOrShortName =
-          trimmedText.length > 0 &&
-          trimmedText.length <= 20 &&
-          !trimmedText.includes('\n') &&
-          (isNumberOrPct ||
-            cell.cur ||
-            /^(Green Zone|Yello Zone|Yellow Zone|Red Zone|Complete|Done|Due|AS Due|TS Due|No Target|TOTAL|Total|योग|DEOGARH)$/i.test(trimmedText) ||
-            (isDenseSheet && rIdx >= 4 && cell.c <= 2));
-
-        if (isSingleWordOrShortName) {
-          attrs.push('class="nowrap-cell"');
-        }
-
-        let innerHtml = '';
-        if (cell.cur && rawText !== '') {
-          const cleanVal = rawText.replace(/^₹\s*/, '').trim();
-          innerHtml = `<div class="excel-acct-cell"><span class="rupee-sym">₹</span><span class="rupee-val">${escHtml(cleanVal)}</span></div>`;
-        } else {
-          innerHtml = escHtml(rawText).replace(/\r?\n/g, '<br>');
-        }
-
-        html += `<td ${attrs.join(' ')} style="${styles.join(';')}">${innerHtml}</td>`;
-      }
-
-      html += `</tr>`;
-    }
-
-    html += `</tbody></table></div>`;
-    return html;
-  }
-
-  function renderBlockDashboard() {
-    ensureBlockPrintStyles();
-    const container = document.getElementById('block-report-container');
-    if (!container || !blockPayload) return;
-
-    const pdfNameEl = document.getElementById('block-pdf-name');
-    if (pdfNameEl) {
-      pdfNameEl.textContent = `${blockPayload.pdfName || 'SBM Report'}.pdf`;
-    }
-
-    const metaEl = document.getElementById('block-cloud-meta');
-    if (metaEl && blockPayload.meta) {
-      metaEl.textContent = `अंतिम अपडेट: ${blockPayload.meta.lastUpdatedDisplay || 'अभी'} • Sheets: ${blockPayload.sheets.length}/${BLOCK_REPORT_SHEETS.length} • v${blockPayload.meta.version || '--'}`;
-    }
-
-    const tabsEl = document.getElementById('block-sheet-tabs');
-    if (tabsEl) {
-      let tabsHtml = `<button class="sheet-tab ${activeSheetFilter === 'ALL' ? 'active' : ''}" onclick="BlockReport.selectSheetTab('ALL')">📑 सभी 14 शीट्स (${blockPayload.sheets.length})</button>`;
-      blockPayload.sheets.forEach((s, idx) => {
-        const isAct = activeSheetFilter === s.name;
-        const badge = s.orientation === 'portrait' ? 'Portrait' : 'Landscape';
-        tabsHtml += `<button class="sheet-tab ${isAct ? 'active' : ''}" onclick="BlockReport.selectSheetTab('${escHtml(s.name)}')">${idx + 1}. ${escHtml(s.name)} <small>(${badge})</small></button>`;
-      });
-      tabsEl.innerHTML = tabsHtml;
-    }
-
-    const sheetsToRender =
-      activeSheetFilter === 'ALL'
-        ? blockPayload.sheets
-        : blockPayload.sheets.filter((s) => s.name === activeSheetFilter);
-
-    let outHtml = '';
-    sheetsToRender.forEach((sheet) => {
-      const pages = splitSheetIntoPrintPages(sheet);
-      outHtml += `<div class="block-sheet-section">`;
-      outHtml += `<div class="block-sheet-bar no-print">
-        <div class="block-sheet-title">
-          <span class="sheet-num-badge">Sheet ${blockPayload.sheets.indexOf(sheet) + 1}</span>
-          <strong>${escHtml(sheet.name)}</strong>
-          <span class="sheet-orient-pill">${sheet.orientation === 'portrait' ? '📄 A4 Portrait' : '📐 A4 Landscape'} (${pages.length} ${pages.length > 1 ? 'Pages' : 'Page'})</span>
-        </div>
-        <button class="btn-sheet-pdf" onclick="BlockReport.exportSingleSheetPDF('${escHtml(sheet.name)}')">⬇ केवल यह शीट PDF</button>
-      </div>`;
-
-      pages.forEach((p) => {
-        outHtml += `<div class="excel-page-card ${p.orientation}">`;
-        outHtml += buildPrintPageHtml(p, false);
-        outHtml += `</div>`;
-      });
-      outHtml += `</div>`;
-    });
-
-    container.innerHTML = outHtml;
-  }
-
-  function showPdfModal(show, progress = 0, title = 'ब्लॉक रिपोर्ट PDF तैयार हो रही है…', subtitle = 'कृपया प्रतीक्षा करें…') {
-    const modal = document.getElementById('pdfModal');
-    if (!modal) return;
-    if (show) {
-      modal.style.display = 'flex';
-      const tEl = document.getElementById('pdfModalTitle');
-      const sEl = document.getElementById('pdfModalSub');
-      const bEl = document.getElementById('pdfProgressBar');
-      if (tEl) tEl.innerText = title;
-      if (sEl) sEl.innerText = subtitle;
-      if (bEl) bEl.style.width = Math.min(100, Math.max(0, progress)) + '%';
-    } else {
-      modal.style.display = 'none';
-    }
-  }
-
-  async function capturePrintPageToCanvas(page, scale = 2) {
-    ensureBlockPrintStyles();
-    const metrics = getPageRenderMetrics(page);
-    const wrapper = document.createElement('div');
-    wrapper.style.position = 'fixed';
-    wrapper.style.top = '0';
-    wrapper.style.left = '-14000px';
-    wrapper.style.width = metrics.captureWidthPx + 'px';
-    wrapper.style.backgroundColor = '#ffffff';
-    wrapper.style.padding = metrics.paddingCss;
-    wrapper.style.boxSizing = 'border-box';
-    wrapper.style.zIndex = '-1';
-    wrapper.innerHTML = buildPrintPageHtml(page, true);
-
-    document.body.appendChild(wrapper);
-    await new Promise((r) => setTimeout(r, 80));
-    if (document.fonts && document.fonts.ready) {
-      await document.fonts.ready;
-    }
-
-    let canvas = null;
-    try {
-      canvas = await html2canvas(wrapper, {
-        scale,
-        backgroundColor: '#ffffff',
-        logging: false,
-        useCORS: true
-      });
-    } finally {
-      document.body.removeChild(wrapper);
-    }
-    return canvas;
-  }
-
-  async function exportSheetsToPdf(sheetsList, customFileName = null) {
-    if (isExportingPdf) return;
-  
+         
