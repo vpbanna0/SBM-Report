@@ -3,12 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>स्वच्छ भारत मिशन (ग्रामीण) | GP विस्तृत रिपोर्ट</title>
+  <title>index</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .btn-nav-link { background: #0e8a5a; color: white; text-decoration: none; padding: 8px 18px; border-radius: 999px; font-weight: 600; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-nav-link:hover { background: #0b7048; }
+    .btn-block-pdf { background: #6b2fb5; }
+    .btn-block-view { background: #0d47a1; text-decoration: none; display: inline-flex; align-items: center; }
+    .excel-print-page { background: #ffffff; color: #000000; font-family: 'Noto Sans Devanagari', 'Calibri', 'Arial', sans-serif; width: 100%; }
+    .excel-sheet-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; background: #ffffff; color: #000000; }
+    .excel-sheet-tbl td, .excel-sheet-tbl th { padding: 4px 5px; line-height: 1.25; word-wrap: break-word; overflow-wrap: break-word; color: #000000; font-family: 'Noto Sans Devanagari', 'Calibri', 'Arial', sans-serif; }
+    .excel-sheet-tbl.dense-sheet td { padding: 3px 3px; line-height: 1.18; }
+    .excel-acct-cell { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 4px; }
+    .excel-acct-cell .rupee-sym { font-weight: 500; }
+    .excel-acct-cell .rupee-val { text-align: right; margin-left: auto; }
+  </style>
 </head>
 <body>
 
@@ -22,15 +35,18 @@
   <div class="header">
     <div>
       <h1>स्वच्छ भारत मिशन (ग्रामीण)</h1>
-      <p>पंचायत समिति देवगढ़, जिला राजसमन्द (राजस्थान) | GP-वार समेकित विश्लेषण</p>
+      <p>पंचायत समिति देवगढ़, जिला राजसमन्द (राजस्थान) | GP-वार एवं ब्लॉक समेकित विश्लेषण</p>
     </div>
-    <div class="header-badge">SBM-G</div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <a href="block.html" class="btn-nav-link">📑 ब्लॉक रिपोर्ट (14 Sheets) देखें</a>
+      <div class="header-badge">SBM-G</div>
+    </div>
   </div>
 
   <div class="upload-bar">
     <div class="cloud-intro">
       <span class="cloud-title">☁️ Google Drive Sync</span>
-      <span class="cloud-copy">Google Drive par rakhi .xlsm workbook se data server-side generate hokar published workbook.json se load hota hai.</span>
+      <span class="cloud-copy">Google Drive पर रखी .xlsm workbook से GP रिपोर्ट (workbook.json) और 14-शीट ब्लॉक रिपोर्ट (block-report.json) सिंक होती हैं।</span>
     </div>
     <div class="cloud-actions">
       <button class="btn-up" id="btnFetch" onclick="syncCloudData()">☁️ डेटा लोड करें</button>
@@ -58,9 +74,11 @@
     </select>
     <span id="gp-count" class="gp-count"></span>
     <div class="action-buttons">
-      <button class="btn-action btn-pdf" onclick="exportCurrentGP()">📄 PDF (Landscape)</button>
+      <button class="btn-action btn-pdf" onclick="exportCurrentGP()">📄 GP PDF (Landscape)</button>
       <button class="btn-action btn-print" onclick="window.print()">🖨️ Print</button>
       <button class="btn-action btn-all" onclick="exportAllGPs()">📑 सभी GP — PDF</button>
+      <button class="btn-action btn-block-pdf" onclick="BlockReport.exportBlockReportPDF()">📥 ब्लॉक रिपोर्ट PDF (14 Sheets)</button>
+      <a href="block.html" class="btn-action btn-block-view">📊 ब्लॉक प्रीव्यू</a>
     </div>
   </div>
 
@@ -82,8 +100,13 @@
   </div>
 </div>
 
+<script src="kruti-dev-converter.js" onerror="var s=document.createElement('script');s.src='kruti_dev_converter.js';document.head.appendChild(s);"></script>
 <script src="data-handler.js"></script>
+<script src="block-report.js" onerror="var s=document.createElement('script');s.src='block_report.js';document.head.appendChild(s);"></script>
 <script src="app.js"></script>
+<script>
+  document.title = 'स्वच्छ भारत मिशन (ग्रामीण) | GP विस्तृत एवं ब्लॉक रिपोर्ट';
+</script>
 
 </body>
 </html>
