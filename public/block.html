@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>block</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .btn-nav-link { background: #0e8a5a; color: white; text-decoration: none; padding: 8px 18px; border-radius: 999px; font-weight: 600; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-nav-link:hover { background: #0b7048; }
+    .pdf-name-pill { background: #ffffff; border: 1px solid #b8cbe0; border-radius: 999px; padding: 5px 14px; font-size: 0.88rem; color: #102a43; }
+    .sheet-tabs-bar { background: #e3ebf6; padding: 10px 26px; display: flex; gap: 8px; overflow-x: auto; border-top: 1px solid #c8d6e8; border-bottom: 1px solid #c8d6e8; }
+    .sheet-tab { background: white; border: 1px solid #b0c4de; border-radius: 999px; padding: 6px 14px; font-size: 0.84rem; font-weight: 600; color: #1b365d; cursor: pointer; white-space: nowrap; font-family: inherit; transition: all 0.15s; }
+    .sheet-tab small { color: #5c728a; font-weight: 400; }
+    .sheet-tab.active { background: #003366; color: white; border-color: #003366; }
+    .sheet-tab.active small { color: #cbd8e8; }
+
+    .block-sheet-section { margin-bottom: 32px; }
+    .block-sheet-bar { display: flex; justify-content: space-between; align-items: center; background: #f1f5fb; border: 1px solid #cfdceb; border-radius: 12px; padding: 10px 16px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .block-sheet-title { display: flex; align-items: center; gap: 10px; font-size: 1rem; color: #0b2545; }
+    .sheet-num-badge { background: #003366; color: white; border-radius: 6px; padding: 3px 9px; font-size: 0.78rem; font-weight: 700; }
+    .sheet-orient-pill { background: #e1ecf7; color: #1e4e79; border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600; }
+    .btn-sheet-pdf { background: #1a9450; color: white; border: none; border-radius: 999px; padding: 6px 14px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+    .excel-page-card { background: #ffffff; border: 1px solid #d0d7de; border-radius: 8px; padding: 18px; margin: 0 auto 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow-x: auto; }
+    .excel-page-card.portrait { max-width: 900px; }
+    .excel-page-card.landscape { max-width: 1320px; }
+
+    .excel-print-page { background: #ffffff; color: #000000; font-family: 'Noto Sans Devanagari', 'Calibri', 'Arial', sans-serif; width: 100%; }
+    .excel-sheet-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; background: #ffffff; color: #000000; }
+    .excel-sheet-tbl td, .excel-sheet-tbl th { padding: 4px 5px; line-height: 1.25; word-wrap: break-word; overflow-wrap: break-word; color: #000000; font-family: 'Noto Sans Devanagari', 'Calibri', 'Arial', sans-serif; }
+    .excel-sheet-tbl.dense-sheet td { padding: 3px 3px; line-height: 1.18; }
+    .excel-acct-cell { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 4px; }
+    .excel-acct-cell .rupee-sym { font-weight: 500; }
+    .excel-acct-cell .rupee-val { text-align: right; margin-left: auto; }
+
+    @media print {
+      .no-print { display: none !important; }
+      .excel-page-card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; page-break-after: always !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header no-print">
+    <div>
+      <h1>स्वच्छ भारत मिशन (ग्रामीण) — ब्लॉक समेकित रिपोर्ट</h1>
+      <p>पंचायत समिति देवगढ़, जिला राजसमन्द (राजस्थान) | Excel VBA (14 Sheets) हूबहू PDF एक्सपोर्ट</p>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <a href="index.html" class="btn-nav-link">⬅ GP-वार रिपोर्ट पर जाएँ</a>
+      <div class="header-badge">BLOCK PDF</div>
+    </div>
+  </div>
+
+  <div class="upload-bar no-print">
+    <div class="cloud-intro">
+      <span class="cloud-title">📑 VBA `SaveSheetsAsPDF` (14 Sheets) ऑटो-जनरेटेड ब्लॉक रिपोर्ट</span>
+      <span class="cloud-copy">
+        Google Drive की <code>.xlsm</code> फ़ाइल (<code>Sheet_Index!I2</code>) से सभी 14 शीट्स (Summary, ODF Plus, CSC 23-24 से 26-27, RRC, IHHL Combine, Tender, AIP, Soak/Compost Pit आदि) KrutiDev/DevLys फॉन्ट सपोर्ट के साथ लोड होती हैं।
+      </span>
+    </div>
+    <div class="cloud-actions">
+      <button class="btn-up" onclick="BlockReport.initBlockPage(false)">☁️ डेटा रीलोड</button>
+      <button class="btn-up btn-refresh" onclick="BlockReport.initBlockPage(true)">↻ ताज़ा सिंक</button>
+      <label class="btn-up" style="background:#5a3e85; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+        📂 लोकल .xlsm चुनें
+        <input type="file" accept=".xlsm,.xlsx,.xls" style="display:none" onchange="BlockReport.handleLocalWorkbookUpload(this.files[0])">
+      </label>
+    </div>
+  </div>
+
+  <div class="status-bar no-print">
+    <div class="status-copy">
+      <span id="block-file-status" class="file-status-pill">☁️ ब्लॉक रिपोर्ट लोड हो रही है…</span>
+      <span id="block-cloud-meta" class="cloud-meta">Google Drive .xlsm से सिंक सक्रिय</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <div class="pdf-name-pill">
+        📄 PDF नाम (<code>Sheet_Index!I2</code>): <strong id="block-pdf-name">SBM Report.pdf</strong>
+      </div>
+      <button class="btn-action btn-pdf" style="font-size:1rem; padding:10px 26px;" onclick="BlockReport.exportBlockReportPDF()">
+        📥 पूरी ब्लॉक रिपोर्ट PDF डाउनलोड करें (14 Sheets)
+      </button>
+      <button class="btn-action btn-print" onclick="window.print()">🖨️ Print</button>
+    </div>
+  </div>
+
+  <div id="block-sheet-tabs" class="sheet-tabs-bar no-print"></div>
+
+  <div class="content" id="block-report-container">
+    <div class="placeholder">
+      <div>📊</div>
+      <p>Google Drive स्रोत से 14 शीट्स की ब्लॉक रिपोर्ट लोड हो रही है…</p>
+    </div>
+  </div>
+</div>
+
+<div id="pdfModal" style="display:none;" class="pdf-modal no-print">
+  <div class="pdf-modal-box">
+    <div style="font-size:2rem;">📄</div>
+    <div id="pdfModalTitle" style="font-weight:bold; margin-top:10px;">ब्लॉक रिपोर्ट PDF तैयार हो रही है…</div>
+    <div style="height:6px; background:#ddd; margin:10px 0; border-radius:4px; overflow:hidden;">
+      <div id="pdfProgressBar" style="width:0%; height:100%; background:#1a9450; transition:width 0.2s;"></div>
+    </div>
+    <div id="pdfModalSub" style="color:#666;">कृपया प्रतीक्षा करें…</div>
+  </div>
+</div>
+
+<!-- Supports both hyphen (-) and underscore (_) filenames automatically -->
+<script src="kruti-dev-converter.js" onerror="var s=document.createElement('script');s.src='kruti_dev_converter.js';document.head.appendChild(s);"></script>
+<script src="block-report.js" onerror="var s=document.createElement('script');s.src='block_report.js';s.onload=function(){BlockReport.initBlockPage(false);};document.head.appendChild(s);"></script>
+<script>
+  document.title = 'स्वच्छ भारत मिशन (ग्रामीण) | ब्लॉक समेकित रिपोर्ट (14 Sheets PDF)';
+  window.addEventListener('DOMContentLoaded', function () {
+    if (window.BlockReport) {
+      BlockReport.initBlockPage(false);
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('download') === '1') {
+      setTimeout(function () {
+        if (window.BlockReport) BlockReport.exportBlockReportPDF();
+      }, 600);
+    }
+  });
+</script>
+
+</body>
+</html>
