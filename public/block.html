@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -10,34 +11,72 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link rel="stylesheet" href="style.css">
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Noto Sans Devanagari', 'Poppins', sans-serif; background: #1e2a3a; padding: 20px; color: #1a2332; }
+    .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 28px; overflow: hidden; }
+    .header { background: linear-gradient(135deg,#001f3d,#003366); color: white; padding: 22px 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .header h1 { font-size: 1.6rem; }
+    .header-badge { background: #e67e00; border-radius: 10px; padding: 8px 16px; font-weight: bold; }
     .btn-nav-link { background: #0e8a5a; color: white; text-decoration: none; padding: 8px 18px; border-radius: 999px; font-weight: 600; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px; }
     .btn-nav-link:hover { background: #0b7048; }
+
+    .upload-bar { background: #0a3347; padding: 14px 26px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+    .btn-up { background: #0e8a5a; color: white; border: none; border-radius: 40px; padding: 10px 24px; cursor: pointer; font-size: 0.95rem; font-family: inherit; font-weight: 600; }
+    .btn-refresh { background: #135f93; }
+    .cloud-intro { display: flex; flex-direction: column; gap: 4px; color: white; max-width: 760px; }
+    .cloud-title { font-size: 1rem; font-weight: 700; }
+    .cloud-copy { font-size: 0.9rem; color: rgba(255,255,255,0.85); }
+    .cloud-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .status-bar { background: #edf2fb; padding: 10px 26px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .file-status-pill { background: rgba(0,140,60,0.15); color: #004d20; border-radius: 20px; padding: 4px 14px; font-weight: 600; display: inline-block; }
+    .file-status-pill.loading { background: rgba(20,93,160,0.14); color: #0e4472; }
+    .file-status-pill.ok { background: rgba(0,140,60,0.18); color: #004d20; }
+    .file-status-pill.err { background: rgba(176,40,32,0.15); color: #7a1111; }
+    .status-copy { display: flex; flex-direction: column; gap: 5px; }
+    .cloud-meta { color: #4c6480; font-size: 0.84rem; }
+
+    .btn-action { border: none; border-radius: 40px; padding: 9px 20px; color: white; cursor: pointer; font-weight: bold; font-family: inherit; font-size: 0.92rem; }
+    .btn-pdf { background: #1a9450; }
+    .btn-print { background: #1a6aaa; }
     .pdf-name-pill { background: #ffffff; border: 1px solid #b8cbe0; border-radius: 999px; padding: 5px 14px; font-size: 0.88rem; color: #102a43; }
+
     .sheet-tabs-bar { background: #e3ebf6; padding: 10px 26px; display: flex; gap: 8px; overflow-x: auto; border-top: 1px solid #c8d6e8; border-bottom: 1px solid #c8d6e8; }
     .sheet-tab { background: white; border: 1px solid #b0c4de; border-radius: 999px; padding: 6px 14px; font-size: 0.84rem; font-weight: 600; color: #1b365d; cursor: pointer; white-space: nowrap; font-family: inherit; transition: all 0.15s; }
     .sheet-tab small { color: #5c728a; font-weight: 400; }
     .sheet-tab.active { background: #003366; color: white; border-color: #003366; }
     .sheet-tab.active small { color: #cbd8e8; }
 
+    .content { padding: 22px 26px; }
+    .placeholder { text-align: center; padding: 40px; color: #6c757d; }
     .block-sheet-section { margin-bottom: 32px; }
     .block-sheet-bar { display: flex; justify-content: space-between; align-items: center; background: #f1f5fb; border: 1px solid #cfdceb; border-radius: 12px; padding: 10px 16px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
-    .block-sheet-title { display: flex; align-items: center; gap: 10px; font-size: 1rem; color: #0b2545; }
+    .block-sheet-title { display: flex; align-items: center; gap: 10px; font-size: 1rem; color: #0b2545; flex-wrap: wrap; }
     .sheet-num-badge { background: #003366; color: white; border-radius: 6px; padding: 3px 9px; font-size: 0.78rem; font-weight: 700; }
     .sheet-orient-pill { background: #e1ecf7; color: #1e4e79; border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600; }
     .btn-sheet-pdf { background: #1a9450; color: white; border: none; border-radius: 999px; padding: 6px 14px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; }
 
-    .excel-page-card { background: #ffffff; border: 1px solid #d0d7de; border-radius: 8px; padding: 18px; margin: 0 auto 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow-x: auto; }
-    .excel-page-card.portrait { max-width: 900px; }
-    .excel-page-card.landscape { max-width: 1320px; }
+    .excel-page-card { background: #ffffff; border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 0 auto 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow-x: auto; }
+    .excel-page-card.portrait { max-width: 860px; }
+    .excel-page-card.landscape { max-width: 1340px; }
 
     .excel-print-page { background: #ffffff; color: #000000; font-family: 'Noto Sans Devanagari', 'Calibri', 'Arial', sans-serif; width: 100%; }
-    .excel-sheet-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; background: #ffffff; color: #000000; }
-    .excel-sheet-tbl td, .excel-sheet-tbl th { padding: 4px 5px; line-height: 1.25; word-wrap: break-word; overflow-wrap: break-word; color: #000000; font-family: 'Noto Sans Devanagari', 'Calibri', 'Arial', sans-serif; }
-    .excel-sheet-tbl.dense-sheet td { padding: 3px 3px; line-height: 1.18; }
-    .excel-acct-cell { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 4px; }
+    .excel-sheet-tbl { width: 100%; border-collapse: collapse; table-layout: auto; background: #ffffff; color: #000000; }
+    .excel-sheet-tbl td, .excel-sheet-tbl th { padding: 4px 6px; line-height: 1.25; word-break: normal; overflow-wrap: break-word; color: #000000; font-family: 'Noto Sans Devanagari', 'Calibri', 'Arial', sans-serif; }
+    .excel-sheet-tbl.compact-7col td { padding: 5px 8px; line-height: 1.28; }
+    .excel-sheet-tbl.dense-sheet td { padding: 3px 4px; line-height: 1.15; }
+    .excel-sheet-tbl td.nowrap-cell { white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important; }
+    .excel-acct-cell { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 4px; white-space: nowrap; }
     .excel-acct-cell .rupee-sym { font-weight: 500; }
     .excel-acct-cell .rupee-val { text-align: right; margin-left: auto; }
 
+    .pdf-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .pdf-modal-box { background: white; border-radius: 20px; padding: 30px; text-align: center; min-width: 300px; max-width: 90vw; }
+
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      .header, .upload-bar, .status-bar, .content { padding-left: 16px; padding-right: 16px; }
+    }
     @media print {
       .no-print { display: none !important; }
       .excel-page-card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; page-break-after: always !important; }
@@ -50,7 +89,7 @@
   <div class="header no-print">
     <div>
       <h1>स्वच्छ भारत मिशन (ग्रामीण) — ब्लॉक समेकित रिपोर्ट</h1>
-      <p>पंचायत समिति देवगढ़, जिला राजसमन्द (राजस्थान) | Excel VBA (14 Sheets) हूबहू PDF एक्सपोर्ट</p>
+      <p>पंचायत समिति देवगढ़, जिला राजसमन्द (राजस्थान) | Excel VBA (14 Sheets / 19 Pages) हूबहू PDF एक्सपोर्ट</p>
     </div>
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
       <a href="index.html" class="btn-nav-link">⬅ GP-वार रिपोर्ट पर जाएँ</a>
@@ -112,23 +151,226 @@
   </div>
 </div>
 
-<!-- Supports both hyphen (-) and underscore (_) filenames automatically -->
-<script src="kruti-dev-converter.js" onerror="var s=document.createElement('script');s.src='kruti_dev_converter.js';document.head.appendChild(s);"></script>
-<script src="block-report.js" onerror="var s=document.createElement('script');s.src='block_report.js';s.onload=function(){BlockReport.initBlockPage(false);};document.head.appendChild(s);"></script>
+<!-- 100% Self-Contained KrutiDevConverter + BlockReport Engine (No external JS files required!) -->
 <script>
-  document.title = 'स्वच्छ भारत मिशन (ग्रामीण) | ब्लॉक समेकित रिपोर्ट (14 Sheets PDF)';
-  window.addEventListener('DOMContentLoaded', function () {
-    if (window.BlockReport) {
-      BlockReport.initBlockPage(false);
-    }
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('download') === '1') {
-      setTimeout(function () {
-        if (window.BlockReport) BlockReport.exportBlockReportPDF();
-      }, 600);
-    }
-  });
-</script>
+(function (root) {
+  'use strict';
 
-</body>
-</html>
+  /* ═══════════════════════════════════════════════════════════════
+     1. Built-in Kruti Dev / DevLys → Unicode Devanagari Converter
+  ═══════════════════════════════════════════════════════════════ */
+  const ARRAY_ONE = [
+    'ñ', 'Q+Z', 'sas', 'aa', ')Z', 'ZZ', '‘', '’', '“', '”',
+    'å', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹',
+    '¶+', 'd+', '[+k', '[+', 'x+', 'T+', 't+', 'M+', '<+', 'Q+', ';+', 'j+', 'u+',
+    'Ùk', 'Ù', 'ä', '–', '—', 'é', '™', '=kk', 'f=k',
+    'à', 'á', 'â', 'ã', 'ºz', 'º', 'í', '{k', '{', '=', '«',
+    'Nî', 'Vî', 'Bî', 'Mî', '<î', '|', 'K', '}',
+    'J', 'Vª', 'Mª', '<ªª', 'Nª', 'Ø', 'Ý', 'nzZ', 'æ', 'ç', 'Á', 'xz', '#', ':',
+    'v‚', 'vkW', 'vks', 'vkS', 'vk', 'v', 'b±', 'Ã', 'bZ', 'b', 'm', 'Å', ',s', ',', '_',
+    'ô', 'd', 'Dk', 'D', '[k', '[', 'x', 'Xk', 'X', '?k', '?', '³',
+    'pkS', 'p', 'Pk', 'P', 'N', 't', 'Tk', 'T', '>', '÷', '¥',
+    'ê', 'ë', 'V', 'B', 'ì', 'ï', 'M+', '<+', 'M', '<', '.k', '.',
+    'r', 'Rk', 'R', 'Fk', 'F', ')', 'n', '/k', 'धk', '/', 'Ë', 'è', 'u', 'Uk', 'U',
+    'i', 'Ik', 'I', 'Q', '¶', 'c', 'Ck', 'C', 'Hk', 'H', 'e', 'Ek', 'E',
+    ';', '¸', 'j', 'y', 'Yk', 'Y', 'G', 'o', 'Ok', 'O',
+    "'k", "'", '"k', '"', 'l', 'Lk', 'L', 'g',
+    'È', 'z',
+    'Ì', 'Í', 'Î', 'Ï', 'Ñ', 'Ò', 'Ó', 'Ô', 'Ö', 'Ø', 'Ù', 'Ük', 'Ü',
+    '‚', 'kW', 'ks', 'kS', 'k', 'h', 'q', 'w', '`', 's', 'S',
+    'a', '¡', '%', 'W', '•', '·', '∙', '·', '~j', '~', '\\', '+', ' ः',
+    '^', '*', 'Þ', 'ß', '(', '¼', '½', '¿', 'À', '¾', 'A', '-', '&', '&', 'Œ', ']', '~ ', '@'
+  ];
+
+  const ARRAY_TWO = [
+    '॰', 'QZ+', 'sa', 'a', 'र्द्ध', 'Z', '"', '"', "'", "'",
+    '०', '१', '२', '३', '४', '५', '६', '७', '८', '९',
+    'फ़्', 'क़', 'ख़', 'ख़्', 'ग़', 'ज़्', 'ज़', 'ड़', 'ढ़', 'फ़', 'य़', 'ऱ', 'ऩ',
+    'त्त', 'त्त्', 'क्त', 'दृ', 'कृ', 'न्न', 'न्न्', '=k', 'f=',
+    'ह्न', 'ह्य', 'हृ', 'ह्म', 'ह्र', 'ह्', 'द्द', 'क्ष', 'क्ष्', 'त्र', 'त्र्',
+    'छ्य', 'ट्य', 'ठ्य', 'ड्य', 'ढ्य', 'द्य', 'ज्ञ', 'द्व',
+    'श्र', 'ट्र', 'ड्र', 'ढ्र', 'छ्र', 'क्र', 'फ्र', 'र्द्र', 'द्र', 'प्र', 'प्र', 'ग्र', 'रु', 'रू',
+    'ऑ', 'ऑ', 'ओ', 'औ', 'आ', 'अ', 'ईं', 'ई', 'ई', 'इ', 'उ', 'ऊ', 'ऐ', 'ए', 'ऋ',
+    'क्क', 'क', 'क', 'क्', 'ख', 'ख्', 'ग', 'ग', 'ग्', 'घ', 'घ्', 'ङ',
+    'चौ', 'च', 'च', 'च्', 'छ', 'ज', 'ज', 'ज्', 'झ', 'झ्', 'ञ',
+    'ट्ट', 'ट्ठ', 'ट', 'ठ', 'ड्ड', 'ड्ढ', 'ड़', 'ढ़', 'ड', 'ढ', 'ण', 'ण्',
+    'त', 'त', 'त्', 'थ', 'थ्', 'द्ध', 'द', 'ध', 'ध', 'ध्', 'ध्', 'ध्', 'न', 'न', 'न्',
+    'प', 'प', 'प्', 'फ', 'फ्', 'ब', 'ब', 'ब्', 'भ', 'भ्', 'म', 'म', 'म्',
+    'य', 'य्', 'र', 'ल', 'ल', 'ल्', 'ळ', 'व', 'व', 'व्',
+    'श', 'श्', 'ष', 'ष्', 'स', 'स', 'स्', 'ह',
+    'ीं', '्र',
+    'द्द', 'ट्ट', 'ट्ठ', 'ड्ड', 'कृ', 'भ', '्य', 'ड्ढ', 'झ्', 'क्र', 'त्त्', 'श', 'श्',
+    'ॉ', 'ॉ', 'ो', 'ौ', 'ा', 'ी', 'ु', 'ू', 'ृ', 'े', 'ै',
+    'ं', 'ँ', 'ः', 'ॅ', 'ऽ', 'ऽ', 'ऽ', 'ऽ', '्र', '्', '?', '़', ':',
+    '‘', '’', '“', '”', ';', '(', ')', '{', '}', '=', '।', '.', '-', 'µ', '॰', ',', '् ', '/'
+  ];
+
+  const KNOWN_ENGLISH_WORDS = new Set([
+    'nlb', 'ihhl', 'to', 'new', 'consolidate', 'consolidated', 'report', 'success',
+    'pending', 'at', 'jta', 'as', 'due', 'vdo', 'land', 'allotment', 'work', 'ts', 'fs',
+    'sbm', 'odf', 'plus', 'csc', 'rrc', 'aip', 'gp', 'ps', 'uc', 'bpl', 'apl', 'lwm', 'swm',
+    'ffc', 'nrega', 'green', 'yello', 'yellow', 'red', 'zone', 'zones', 'total', 'sr', 'no',
+    'sno', 'target', 'sanctioned', 'geo', 'tagged', 'tag', 'paid', 'payment', 'percantage',
+    'percentage', 'aspiring', 'rising', 'model', 'village', 'door', 'collection', 'year',
+    'complete', 'completed', 'geotagged', 'sanction', 'issued', 'cancelled', 'not', 'start',
+    'in', 'progress', 'plinth', 'level', 'lintle', 'lintel', 'roof', 'final', 'form',
+    'propsal', 'proposal', 'sent', 'sdm', 'office', 'allotted', 'under', 'construction',
+    'head', 'name', 'of', 'physical', 'status', 'financial', 'expenditure', 'from', 'average',
+    'block', 'overall', 'achievement', 'date', 'tendor', 'tender', 'open', 'firm', 'rate',
+    'owner', 'mobile', 'order', 'timeline', 'amount', 'yes', 'soak', 'pit', 'compost',
+    'individual', 'assest', 'asset', 'combine', 'category', 'done', 'offline', 'online',
+    'bsr', 'cancel', 'deogarh', 'rajsamand',
+    'april', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
+  ]);
+
+  function looksLikeKrutiDev(text) {
+    if (text == null) return false;
+    const s = String(text).trim();
+    if (!s) return false;
+    const hasDevanagari = /[\u0900-\u097F]/.test(s);
+    if (/[Øç¼½±ÆÇÉÊÙ]/.test(s)) return true;
+    if (/fnukad|iapk;r|xzke|'kkSpky;|fuekZ\.k|LoPN|fjiksVZ|lfefr|nsox<\+|jktleUn|;ksx|Hkqxrku|fcykuke|vkaxuokM|lkeqnkf;d|ekWfuVfjax|dkWih|vkWuykbZu/.test(s)) {
+      return true;
+    }
+    if (hasDevanagari) return false;
+    const krutiTokens = [
+      /\b(ds|dk|dh|esa|ls|ij|gS|gSa|ugha|rFkk|,oa|Jh|xzke|iapk;r|dk;Z|lfefr|ftyk|fodkl|LoPN|Hkkjr|fe'ku|çxfr|fjiksVZ|fnukad|;ksx|dqy|y{;|Loh—r|Hkqxrku|fcykuke|dkWih|vkWuykbZu|odZ|vkWMZj|Vs\.Mj)\b/,
+      /[a-zA-Z]\+[a-zA-Z]?/,
+      /[a-zA-Z];[a-zA-Z]/,
+      /'kk|"kk|ksM\+|kSM\+|pkS|fd;k|x;k|tkjh|orZeku/
+    ];
+    return krutiTokens.some((re) => re.test(s));
+  }
+
+  function rawKrutiToUnicode(input) {
+    if (input == null || input === '') return '';
+    let modified = String(input);
+
+    for (let i = 0; i < ARRAY_ONE.length; i++) {
+      const from = ARRAY_ONE[i];
+      const to = ARRAY_TWO[i];
+      let idx = modified.indexOf(from);
+      while (idx !== -1) {
+        modified = modified.replace(from, to);
+        idx = modified.indexOf(from);
+      }
+    }
+
+    modified = modified.replace(/±/g, 'Zं');
+    modified = modified.replace(/Æ/g, 'र्f');
+
+    let posI = modified.indexOf('f');
+    while (posI !== -1) {
+      const nextChar = modified.charAt(posI + 1);
+      if (!nextChar) break;
+      modified = modified.replace('f' + nextChar, nextChar + 'ि');
+      posI = modified.indexOf('f', posI + 1);
+    }
+
+    modified = modified.replace(/Ç/g, 'fa');
+    modified = modified.replace(/É/g, 'र्fa');
+
+    posI = modified.indexOf('fa');
+    while (posI !== -1) {
+      const nextChar = modified.charAt(posI + 2);
+      if (!nextChar) break;
+      modified = modified.replace('fa' + nextChar, nextChar + 'िं');
+      posI = modified.indexOf('fa', posI + 2);
+    }
+
+    modified = modified.replace(/Ê/g, 'ीZ');
+
+    let posWrongEe = modified.indexOf('ि्');
+    while (posWrongEe !== -1) {
+      const consNext = modified.charAt(posWrongEe + 2);
+      if (!consNext) break;
+      modified = modified.replace('ि्' + consNext, '्' + consNext + 'ि');
+      posWrongEe = modified.indexOf('ि्', posWrongEe + 2);
+    }
+
+    const matras = 'अ आ इ ई उ ऊ ए ऐ ओ औ ऑ ा ि ी ु ू ृ े ै ो ौ ॉ ं : ँ ॅ';
+    let posR = modified.indexOf('Z');
+    let safety = 0;
+    while (posR > 0 && safety < 500) {
+      safety++;
+      let probPos = posR - 1;
+      let ch = modified.charAt(probPos);
+      while (probPos > 0 && matras.indexOf(ch) !== -1) {
+        probPos -= 1;
+        ch = modified.charAt(probPos);
+      }
+      while (probPos >= 2 && modified.charAt(probPos - 1) === '्') {
+        probPos -= 2;
+      }
+      const target = modified.substring(probPos, posR);
+      modified =
+        modified.substring(0, probPos) +
+        'र्' +
+        target +
+        modified.substring(posR + 1);
+      posR = modified.indexOf('Z');
+    }
+
+    modified = modified.replace(/आॅ/g, 'ऑ').replace(/ाॅ/g, 'ॉ').replace(/अा/g, 'आ');
+    modified = modified.replace(/दिनांक:-/g, 'दिनांक :-');
+    return modified;
+  }
+
+  function isPureEnglishOrCodeToken(token) {
+    const t = token.trim();
+    if (!t) return true;
+    if (/^[₹$0-9.,%+\-*/()=\s:]+$/.test(t)) return true;
+    if (/^(Work|AS|TS|FS|SPL|Spl)\s*[/\-]\s*[0-9]/i.test(t)) return true;
+    const clean = t.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '').toLowerCase();
+    if (clean && KNOWN_ENGLISH_WORDS.has(clean) && !/[;+Øç¼½]/.test(t)) {
+      return true;
+    }
+    return false;
+  }
+
+  function convertTextSmart(text, forceKruti = false) {
+    if (text == null || text === '') return '';
+    if (typeof text === 'number' || typeof text === 'boolean') return String(text);
+
+    const str = String(text).replace(/आॅ/g, 'ऑ').replace(/ाॅ/g, 'ॉ').replace(/अा/g, 'आ');
+    if (/^[\d\s.,%+\-*/():₹]+$/.test(str.trim())) return str;
+    if (/^(Work|AS|TS|FS|SPL|Spl)\s*[/\-]\s*\d/i.test(str.trim())) return str;
+    if (/^(Pending At JTA|Pending At VDO|AS Due at VDO|Land Allotment Due|Complete|Work In Progress|Cancelled|Not Start|Plinth Level|Lintle Level|Roof Level|Done|Due|Yes|No|Total|TOTAL|Green Zone|Yello Zone|Yellow Zone|Red Zone|BSR|AS Due|TS Due|No Target)$/i.test(str.trim())) {
+      return str;
+    }
+
+    const shouldConvert = forceKruti || looksLikeKrutiDev(str);
+    if (!shouldConvert) return str;
+
+    return str
+      .split(/\r?\n/)
+      .map((line) => {
+        if (!line.trim()) return line;
+        const parts = line.match(/\S+|\s+/g) || [line];
+        const segments = [];
+        for (const part of parts) {
+          if (/^\s+$/.test(part)) {
+            if (segments.length > 0) {
+              segments[segments.length - 1].text += part;
+            } else {
+              segments.push({ isEng: true, text: part });
+            }
+            continue;
+          }
+          const isEng = isPureEnglishOrCodeToken(part);
+          if (segments.length > 0 && segments[segments.length - 1].isEng === isEng) {
+            segments[segments.length - 1].text += part;
+          } else {
+            segments.push({ isEng, text: part });
+          }
+        }
+        return segments
+          .map((seg) => (seg.isEng ? seg.text : rawKrutiToUnicode(seg.text)))
+          .join('');
+      })
+      .join('\n');
+  }
+
+  root.KrutiDevConverter = {
+    looksLikeKrutiDev,
+    rawKrut
