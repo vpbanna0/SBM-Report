@@ -8,7 +8,6 @@
   <script async src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script async src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script async src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <link rel="stylesheet" href="style.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Noto Sans Devanagari', 'Poppins', sans-serif; background: #1e2a3a; padding: 20px; color: #1a2332; }
@@ -76,10 +75,265 @@
       body { padding: 10px; }
       .header, .upload-bar, .status-bar, .content { padding-left: 16px; padding-right: 16px; }
     }
-    @media print {
-      .no-print { display: none !important; }
-      .excel-page-card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; page-break-after: always !important; }
+    
+  @page {
+    size: A4 landscape;
+    margin: 6mm 8mm;
+  }
+  @page block-portrait {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+  @page block-landscape {
+    size: A4 landscape;
+    margin: 6mm 8mm;
+  }
+
+  .excel-print-page {
+    background: #ffffff;
+    color: #000000;
+    font-family: 'Noto Sans Devanagari', 'Calibri', 'Arial', sans-serif;
+    width: 100%;
+  }
+  .excel-sheet-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    background: #ffffff;
+    color: #000000;
+    border: none !important;
+  }
+  .excel-sheet-tbl td, .excel-sheet-tbl th {
+    padding: 4px 6px;
+    line-height: 1.25;
+    word-break: normal;
+    overflow-wrap: break-word;
+    color: #000000;
+    font-family: 'Noto Sans Devanagari', 'Calibri', 'Arial', sans-serif;
+  }
+  .excel-sheet-tbl.compact-7col td {
+    padding: 5px 8px;
+    line-height: 1.28;
+  }
+  .excel-sheet-tbl.wide-13col td {
+    padding: 3.5px 5px;
+    line-height: 1.2;
+  }
+  .excel-sheet-tbl.dense-sheet td {
+    padding: 3px 4px;
+    line-height: 1.15;
+  }
+  .excel-sheet-tbl td.nowrap-cell {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+  }
+  .excel-acct-cell {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .excel-acct-cell .rupee-sym { font-weight: 500; }
+  .excel-acct-cell .rupee-val { text-align: right; margin-left: auto; }
+
+  @media print {
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
     }
+    html, body {
+      background: #ffffff !important;
+      color: #000000 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: auto !important;
+      zoom: 1 !important;
+    }
+    .no-print, .header, .upload-bar, .status-bar, .gp-bar, .action-buttons, .sheet-tabs-bar, .block-sheet-bar, .pdf-modal, .print-header, #debug-panel {
+      display: none !important;
+    }
+    .container, .content, #block-report-container, .block-sheet-section {
+      max-width: none !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: #ffffff !important;
+      overflow: visible !important;
+    }
+    .excel-page-card {
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 auto !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      background: #ffffff !important;
+      overflow: visible !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
+      page-break-after: always !important;
+      break-after: page !important;
+    }
+    .excel-page-card.portrait {
+      page: block-portrait !important;
+      max-width: 190mm !important;
+    }
+    .excel-page-card.landscape {
+      page: block-landscape !important;
+      max-width: 281mm !important;
+    }
+    .block-sheet-section:last-of-type .excel-page-card:last-of-type {
+      page-break-after: auto !important;
+      break-after: auto !important;
+    }
+    .excel-print-page {
+      width: 100% !important;
+      margin: 0 auto !important;
+      overflow: visible !important;
+    }
+    .excel-sheet-tbl {
+      width: 100% !important;
+      margin: 0 auto !important;
+      border-collapse: collapse !important;
+      border: none !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .excel-sheet-tbl.compact-7col {
+      max-width: 244mm !important;
+    }
+    .excel-sheet-tbl tr {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      min-height: 0 !important;
+      height: auto !important;
+    }
+    .excel-sheet-tbl tr.excel-spacer-row,
+    .excel-sheet-tbl tr.excel-spacer-row td {
+      height: 5px !important;
+      max-height: 5px !important;
+      min-height: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
+    }
+    /* Portrait Summary print typography */
+    .excel-print-page.portrait .excel-sheet-tbl td.cell-sz-body {
+      font-size: 8pt !important;
+      padding: 1.8px 3.5px !important;
+      line-height: 1.1 !important;
+    }
+    .excel-print-page.portrait .excel-sheet-tbl td.cell-sz-sec {
+      font-size: 9.5pt !important;
+      padding: 2px 3.5px !important;
+      line-height: 1.12 !important;
+    }
+    .excel-print-page.portrait .excel-sheet-tbl td.cell-sz-sub {
+      font-size: 11.5pt !important;
+      padding: 3px 4px !important;
+      line-height: 1.18 !important;
+    }
+    .excel-print-page.portrait .excel-sheet-tbl td.cell-sz-title {
+      font-size: 16pt !important;
+      padding: 2px 4px !important;
+      line-height: 1.15 !important;
+    }
+    /* Landscape 7-col compact print typography */
+    .excel-sheet-tbl.compact-7col td.cell-sz-body {
+      font-size: 8.5pt !important;
+      padding: 2.2px 5px !important;
+      line-height: 1.14 !important;
+    }
+    .excel-sheet-tbl.compact-7col td.cell-sz-sec {
+      font-size: 9.5pt !important;
+      padding: 2.5px 5px !important;
+      line-height: 1.15 !important;
+    }
+    .excel-sheet-tbl.compact-7col td.cell-sz-sub {
+      font-size: 11pt !important;
+      padding: 2.5px 5px !important;
+      line-height: 1.15 !important;
+    }
+    .excel-sheet-tbl.compact-7col td.cell-sz-title {
+      font-size: 15pt !important;
+      padding: 3px 5px !important;
+      line-height: 1.15 !important;
+    }
+    /* Landscape 8-11 col medium print typography */
+    .excel-sheet-tbl.med-sheet td.cell-sz-body {
+      font-size: 8pt !important;
+      padding: 2px 3.5px !important;
+      line-height: 1.12 !important;
+    }
+    .excel-sheet-tbl.med-sheet td.cell-sz-sec {
+      font-size: 9pt !important;
+      padding: 2px 4px !important;
+      line-height: 1.14 !important;
+    }
+    .excel-sheet-tbl.med-sheet td.cell-sz-sub {
+      font-size: 11pt !important;
+      padding: 2.5px 4px !important;
+      line-height: 1.15 !important;
+    }
+    .excel-sheet-tbl.med-sheet td.cell-sz-title {
+      font-size: 15pt !important;
+      padding: 3px 4px !important;
+      line-height: 1.15 !important;
+    }
+    /* Landscape 12-14 col (RRC Updated 4) print typography */
+    .excel-sheet-tbl.wide-13col td.cell-sz-body {
+      font-size: 6.8pt !important;
+      padding: 1.5px 2.5px !important;
+      line-height: 1.08 !important;
+    }
+    .excel-sheet-tbl.wide-13col td.cell-sz-sec {
+      font-size: 8pt !important;
+      padding: 1.8px 3px !important;
+      line-height: 1.1 !important;
+    }
+    .excel-sheet-tbl.wide-13col td.cell-sz-sub {
+      font-size: 10pt !important;
+      padding: 2px 3px !important;
+      line-height: 1.12 !important;
+    }
+    .excel-sheet-tbl.wide-13col td.cell-sz-title {
+      font-size: 14pt !important;
+      padding: 2.5px 3px !important;
+      line-height: 1.12 !important;
+    }
+    /* Landscape 15-21 col dense (All IHHL Combine, Target AIP, Financial) print typography */
+    .excel-sheet-tbl.dense-sheet td.cell-sz-body,
+    .excel-sheet-tbl.dense-sheet td.cell-sz-sm {
+      font-size: 5.8pt !important;
+      padding: 1.2px 1.8px !important;
+      line-height: 1.04 !important;
+    }
+    .excel-sheet-tbl.dense-sheet td.cell-sz-sec {
+      font-size: 7.2pt !important;
+      padding: 1.5px 2px !important;
+      line-height: 1.08 !important;
+    }
+    .excel-sheet-tbl.dense-sheet td.cell-sz-sub {
+      font-size: 9.5pt !important;
+      padding: 2px 2.5px !important;
+      line-height: 1.1 !important;
+    }
+    .excel-sheet-tbl.dense-sheet td.cell-sz-title {
+      font-size: 13pt !important;
+      padding: 2px 3px !important;
+      line-height: 1.12 !important;
+    }
+  }
+
   </style>
 </head>
 <body>
@@ -125,7 +379,7 @@
       <button class="btn-action btn-pdf" style="font-size:1rem; padding:10px 26px;" onclick="BlockReport.exportBlockReportPDF()">
         📥 पूरी ब्लॉक रिपोर्ट PDF डाउनलोड करें (14 Sheets)
       </button>
-      <button class="btn-action btn-print" onclick="window.print()">🖨️ Print</button>
+      <button class="btn-action btn-print" onclick="BlockReport.printBlockReport()">🖨️ Print</button>
     </div>
   </div>
 
@@ -152,12 +406,13 @@
 
 <!-- 100% Self-Contained KrutiDevConverter + BlockReport Engine (No external JS files required!) -->
 <script>
-(function (root) {
+;(function (root) {
   'use strict';
 
-  /* ═══════════════════════════════════════════════════════════════
-     1. Built-in Kruti Dev / DevLys → Unicode Devanagari Converter
-  ═══════════════════════════════════════════════════════════════ */
+  /* ═══════════════════════════════════════════════════════════════════════════
+     PART 1: Kruti Dev (010/011/016) & DevLys (010/020) → Unicode Converter
+     (Built directly into block-report.js so it works even standalone!)
+  ═══════════════════════════════════════════════════════════════════════════ */
   const ARRAY_ONE = [
     'ñ', 'Q+Z', 'sas', 'aa', ')Z', 'ZZ', '‘', '’', '“', '”',
     'å', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹',
@@ -370,15 +625,17 @@
       .join('\n');
   }
 
-  root.KrutiDevConverter = {
-    looksLikeKrutiDev,
-    rawKrutiToUnicode,
-    convertTextSmart
-  };
+  if (!root.KrutiDevConverter) {
+    root.KrutiDevConverter = {
+      looksLikeKrutiDev,
+      rawKrutiToUnicode,
+      convertTextSmart
+    };
+  }
 
-  /* ═══════════════════════════════════════════════════════════════
-     2. Built-in 14-Sheet / 19-Page Block Report Renderer & PDF Engine
-  ═══════════════════════════════════════════════════════════════ */
+  /* ═══════════════════════════════════════════════════════════════════════════
+     PART 2: 14-Sheet / 19-Page Block Report Renderer & PDF Exporter
+  ═══════════════════════════════════════════════════════════════════════════ */
   const BLOCK_REPORT_SHEETS = [
     'Summary',
     'ODF Plus',
@@ -400,6 +657,284 @@
   let activeSheetFilter = 'ALL';
   let isExportingPdf = false;
 
+  function ensureBlockPrintStyles() {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById('block-report-container') && !document.getElementById('gpsel')) {
+      document.querySelectorAll('link[rel="stylesheet"]').forEach((lnk) => {
+        const href = lnk.getAttribute('href') || '';
+        if (href.includes('style.css')) {
+          lnk.disabled = true;
+          if (lnk.parentNode) lnk.parentNode.removeChild(lnk);
+        }
+      });
+    }
+    let style = document.getElementById('block-report-auto-styles');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'block-report-auto-styles';
+      document.head.appendChild(style);
+    }
+    style.textContent = `
+  @page {
+    size: A4 landscape;
+    margin: 6mm 8mm;
+  }
+  @page block-portrait {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+  @page block-landscape {
+    size: A4 landscape;
+    margin: 6mm 8mm;
+  }
+
+  .excel-print-page {
+    background: #ffffff;
+    color: #000000;
+    font-family: 'Noto Sans Devanagari', 'Calibri', 'Arial', sans-serif;
+    width: 100%;
+  }
+  .excel-sheet-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    background: #ffffff;
+    color: #000000;
+    border: none !important;
+  }
+  .excel-sheet-tbl td, .excel-sheet-tbl th {
+    padding: 4px 6px;
+    line-height: 1.25;
+    word-break: normal;
+    overflow-wrap: break-word;
+    color: #000000;
+    font-family: 'Noto Sans Devanagari', 'Calibri', 'Arial', sans-serif;
+  }
+  .excel-sheet-tbl.compact-7col td {
+    padding: 5px 8px;
+    line-height: 1.28;
+  }
+  .excel-sheet-tbl.wide-13col td {
+    padding: 3.5px 5px;
+    line-height: 1.2;
+  }
+  .excel-sheet-tbl.dense-sheet td {
+    padding: 3px 4px;
+    line-height: 1.15;
+  }
+  .excel-sheet-tbl td.nowrap-cell {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+  }
+  .excel-acct-cell {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .excel-acct-cell .rupee-sym { font-weight: 500; }
+  .excel-acct-cell .rupee-val { text-align: right; margin-left: auto; }
+
+  @media print {
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    html, body {
+      background: #ffffff !important;
+      color: #000000 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: auto !important;
+      zoom: 1 !important;
+    }
+    .no-print, .header, .upload-bar, .status-bar, .gp-bar, .action-buttons, .sheet-tabs-bar, .block-sheet-bar, .pdf-modal, .print-header, #debug-panel {
+      display: none !important;
+    }
+    .container, .content, #block-report-container, .block-sheet-section {
+      max-width: none !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: #ffffff !important;
+      overflow: visible !important;
+    }
+    .excel-page-card {
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 auto !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      background: #ffffff !important;
+      overflow: visible !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
+      page-break-after: always !important;
+      break-after: page !important;
+    }
+    .excel-page-card.portrait {
+      page: block-portrait !important;
+      max-width: 190mm !important;
+    }
+    .excel-page-card.landscape {
+      page: block-landscape !important;
+      max-width: 281mm !important;
+    }
+    .block-sheet-section:last-of-type .excel-page-card:last-of-type {
+      page-break-after: auto !important;
+      break-after: auto !important;
+    }
+    .excel-print-page {
+      width: 100% !important;
+      margin: 0 auto !important;
+      overflow: visible !important;
+    }
+    .excel-sheet-tbl {
+      width: 100% !important;
+      margin: 0 auto !important;
+      border-collapse: collapse !important;
+      border: none !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .excel-sheet-tbl.compact-7col {
+      max-width: 244mm !important;
+    }
+    .excel-sheet-tbl tr {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      min-height: 0 !important;
+      height: auto !important;
+    }
+    .excel-sheet-tbl tr.excel-spacer-row,
+    .excel-sheet-tbl tr.excel-spacer-row td {
+      height: 5px !important;
+      max-height: 5px !important;
+      min-height: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
+    }
+    /* Portrait Summary print typography */
+    .excel-print-page.portrait .excel-sheet-tbl td.cell-sz-body {
+      font-size: 8pt !important;
+      padding: 1.8px 3.5px !important;
+      line-height: 1.1 !important;
+    }
+    .excel-print-page.portrait .excel-sheet-tbl td.cell-sz-sec {
+      font-size: 9.5pt !important;
+      padding: 2px 3.5px !important;
+      line-height: 1.12 !important;
+    }
+    .excel-print-page.portrait .excel-sheet-tbl td.cell-sz-sub {
+      font-size: 11.5pt !important;
+      padding: 3px 4px !important;
+      line-height: 1.18 !important;
+    }
+    .excel-print-page.portrait .excel-sheet-tbl td.cell-sz-title {
+      font-size: 16pt !important;
+      padding: 2px 4px !important;
+      line-height: 1.15 !important;
+    }
+    /* Landscape 7-col compact print typography */
+    .excel-sheet-tbl.compact-7col td.cell-sz-body {
+      font-size: 8.5pt !important;
+      padding: 2.2px 5px !important;
+      line-height: 1.14 !important;
+    }
+    .excel-sheet-tbl.compact-7col td.cell-sz-sec {
+      font-size: 9.5pt !important;
+      padding: 2.5px 5px !important;
+      line-height: 1.15 !important;
+    }
+    .excel-sheet-tbl.compact-7col td.cell-sz-sub {
+      font-size: 11pt !important;
+      padding: 2.5px 5px !important;
+      line-height: 1.15 !important;
+    }
+    .excel-sheet-tbl.compact-7col td.cell-sz-title {
+      font-size: 15pt !important;
+      padding: 3px 5px !important;
+      line-height: 1.15 !important;
+    }
+    /* Landscape 8-11 col medium print typography */
+    .excel-sheet-tbl.med-sheet td.cell-sz-body {
+      font-size: 8pt !important;
+      padding: 2px 3.5px !important;
+      line-height: 1.12 !important;
+    }
+    .excel-sheet-tbl.med-sheet td.cell-sz-sec {
+      font-size: 9pt !important;
+      padding: 2px 4px !important;
+      line-height: 1.14 !important;
+    }
+    .excel-sheet-tbl.med-sheet td.cell-sz-sub {
+      font-size: 11pt !important;
+      padding: 2.5px 4px !important;
+      line-height: 1.15 !important;
+    }
+    .excel-sheet-tbl.med-sheet td.cell-sz-title {
+      font-size: 15pt !important;
+      padding: 3px 4px !important;
+      line-height: 1.15 !important;
+    }
+    /* Landscape 12-14 col (RRC Updated 4) print typography */
+    .excel-sheet-tbl.wide-13col td.cell-sz-body {
+      font-size: 6.8pt !important;
+      padding: 1.5px 2.5px !important;
+      line-height: 1.08 !important;
+    }
+    .excel-sheet-tbl.wide-13col td.cell-sz-sec {
+      font-size: 8pt !important;
+      padding: 1.8px 3px !important;
+      line-height: 1.1 !important;
+    }
+    .excel-sheet-tbl.wide-13col td.cell-sz-sub {
+      font-size: 10pt !important;
+      padding: 2px 3px !important;
+      line-height: 1.12 !important;
+    }
+    .excel-sheet-tbl.wide-13col td.cell-sz-title {
+      font-size: 14pt !important;
+      padding: 2.5px 3px !important;
+      line-height: 1.12 !important;
+    }
+    /* Landscape 15-21 col dense (All IHHL Combine, Target AIP, Financial) print typography */
+    .excel-sheet-tbl.dense-sheet td.cell-sz-body,
+    .excel-sheet-tbl.dense-sheet td.cell-sz-sm {
+      font-size: 5.8pt !important;
+      padding: 1.2px 1.8px !important;
+      line-height: 1.04 !important;
+    }
+    .excel-sheet-tbl.dense-sheet td.cell-sz-sec {
+      font-size: 7.2pt !important;
+      padding: 1.5px 2px !important;
+      line-height: 1.08 !important;
+    }
+    .excel-sheet-tbl.dense-sheet td.cell-sz-sub {
+      font-size: 9.5pt !important;
+      padding: 2px 2.5px !important;
+      line-height: 1.1 !important;
+    }
+    .excel-sheet-tbl.dense-sheet td.cell-sz-title {
+      font-size: 13pt !important;
+      padding: 2px 3px !important;
+      line-height: 1.12 !important;
+    }
+  }
+`;
+  }
+
   function escHtml(val) {
     if (val === null || val === undefined) return '';
     return String(val).replace(/[&<>"']/g, (m) => ({
@@ -418,7 +953,7 @@
   }
 
 
-  const EMBEDDED_BLOCK_REPORT_GZ_B64 = "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";
+  const EMBEDDED_BLOCK_REPORT_GZ_B64 = "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";
 
   async function decodeEmbeddedBlockReport() {
     if (!EMBEDDED_BLOCK_REPORT_GZ_B64 || typeof DecompressionStream === "undefined") return null;
@@ -491,7 +1026,6 @@
 
     const nameNorm = sheet.name.trim().toLowerCase();
 
-    // 1. Summary sheet: Portrait (2 pages — split right before CSC Progress Year 2025-26)
     if (nameNorm === 'summary') {
       let splitIdx = rows.findIndex((r) =>
         (r.cells || []).some((c) => String(c.v || '').includes('2025-26') && String(c.v || '').includes('CSC'))
@@ -539,7 +1073,6 @@
 
     const orientation = sheet.orientation === 'portrait' ? 'portrait' : 'landscape';
 
-    // 2. Stacked multi-table sheets (AIP 26-27 Financial [2 tables], Individual assest 26-27 [4 tables])
     const tableBlocks = [];
     let blockStart = 0;
 
@@ -573,7 +1106,6 @@
       }));
     }
 
-    // 3. Single-table sheet: fits on 1 page
     return [
       {
         sheetName: sheet.name,
@@ -650,12 +1182,20 @@
     const metrics = getPageRenderMetrics(page);
     const baseFontPx = metrics.baseFontPx;
     const isDenseSheet = colCount >= 15;
+    const isWide13Col = colCount >= 12 && colCount < 15;
     const isCompact7Col = colCount <= 7 && page.orientation === 'landscape';
+    const isMedSheet = !isDenseSheet && !isWide13Col && !isCompact7Col && page.orientation === 'landscape';
     const sheetLower = (page.sheetName || '').trim().toLowerCase();
     const isIhhlCombine = sheetLower.includes('ihhl data combine');
 
+    const tblClasses = ['excel-sheet-tbl'];
+    if (isDenseSheet) tblClasses.push('dense-sheet');
+    else if (isWide13Col) tblClasses.push('wide-13col');
+    else if (isCompact7Col) tblClasses.push('compact-7col');
+    else if (isMedSheet) tblClasses.push('med-sheet');
+
     let html = `<div class="excel-print-page ${page.orientation} ${forPdfCapture ? 'pdf-capture-mode' : ''}" data-sheet="${escHtml(page.sheetName)}" data-orientation="${page.orientation}">`;
-    html += `<table class="excel-sheet-tbl ${isDenseSheet ? 'dense-sheet' : ''} ${isCompact7Col ? 'compact-7col' : ''}">`;
+    html += `<table class="${tblClasses.join(' ')}" style="border:none !important">`;
     html += `<colgroup>`;
     for (const col of cols) {
       const pct = ((Math.max(col.width || 10, 4) / totalExcelWidth) * 100).toFixed(2);
@@ -670,7 +1210,7 @@
 
       if (isRowEmpty(row)) {
         const spacerHt = row.ht ? Math.min(Math.round(row.ht * 0.65), 12) : 8;
-        html += `<tr class="excel-spacer-row" style="height:${spacerHt}px"><td colspan="${colCount}" style="border:none;padding:0;height:${spacerHt}px"></td></tr>`;
+        html += `<tr class="excel-spacer-row" style="height:${spacerHt}px"><td colspan="${colCount}" style="border:none !important;padding:0 !important;background:transparent !important;height:${spacerHt}px"></td></tr>`;
         continue;
       }
 
@@ -685,7 +1225,7 @@
         const hasText = cell.v !== null && cell.v !== undefined && String(cell.v).trim() !== '';
         const isBorderless = !cell.bd && !cell.bg;
 
-        if (hasText && isBorderless && (!cell.cs || cell.cs === 1) && (!cell.rs || cell.rs === 1)) {
+        if (isBorderless && (!cell.cs || cell.cs === 1) && (!cell.rs || cell.rs === 1)) {
           let extraSpan = 0;
           while (cIdx + 1 < rawCells.length) {
             const nextC = rawCells[cIdx + 1];
@@ -708,7 +1248,7 @@
       }
 
       const rowIsTotal = isTotalRow(row);
-      const rowStyle = row.ht && !isDenseSheet ? `style="min-height:${Math.round(row.ht * 1.05)}px"` : '';
+      const rowStyle = '';
       html += `<tr ${rowStyle}>`;
 
       for (const cell of processedCells) {
@@ -722,12 +1262,12 @@
         const styles = [];
         if (cell.bd) {
           const [bt, br, bb, bl] = cell.bd;
-          styles.push(`border-top:${bt ? '1px solid #000' : 'none'}`);
-          styles.push(`border-right:${br ? '1px solid #000' : 'none'}`);
-          styles.push(`border-bottom:${bb ? '1px solid #000' : 'none'}`);
-          styles.push(`border-left:${bl ? '1px solid #000' : 'none'}`);
+          styles.push(`border-top:${bt ? '1px solid #000' : 'none'} !important`);
+          styles.push(`border-right:${br ? '1px solid #000' : 'none'} !important`);
+          styles.push(`border-bottom:${bb ? '1px solid #000' : 'none'} !important`);
+          styles.push(`border-left:${bl ? '1px solid #000' : 'none'} !important`);
         } else {
-          styles.push('border:none');
+          styles.push('border:none !important');
         }
 
         let bg = cell.bg || null;
@@ -739,19 +1279,29 @@
           }
         }
 
-        if (bg) styles.push(`background-color:${bg}`);
-        if (cell.fg) styles.push(`color:${cell.fg}`);
+        if (bg) {
+          styles.push(`background-color:${bg} !important`);
+        } else {
+          styles.push('background-color:transparent !important');
+        }
+        styles.push(`color:${cell.fg || '#000000'} !important`);
 
+        let szClass = 'cell-sz-body';
         if (cell.sz) {
-          if (cell.sz >= 30) {
+          if (cell.sz >= 28) {
+            szClass = 'cell-sz-title';
             styles.push('font-size:26px;line-height:1.2;padding:4px 4px');
           } else if (cell.sz >= 17) {
+            szClass = 'cell-sz-sub';
             styles.push('font-size:18px;line-height:1.2;padding:4px 4px');
           } else if (cell.sz >= 15) {
+            szClass = 'cell-sz-sec';
             styles.push('font-size:15px;line-height:1.2');
           } else if (cell.sz >= 13.5) {
+            szClass = 'cell-sz-sec';
             styles.push(`font-size:${isDenseSheet ? 11.5 : 13.5}px;line-height:1.2`);
           } else if (cell.sz <= 9) {
+            szClass = 'cell-sz-sm';
             styles.push('font-size:9.5px');
           } else {
             styles.push(`font-size:${baseFontPx}px`);
@@ -760,14 +1310,14 @@
           styles.push(`font-size:${baseFontPx}px`);
         }
 
-        if (cell.b || rowIsTotal) styles.push('font-weight:700');
+        if (cell.b || rowIsTotal) styles.push('font-weight:700 !important');
         if (cell.i) styles.push('font-style:italic');
         if (cell.st) styles.push('text-decoration:line-through');
 
         const hAlign = cell.al || 'left';
-        styles.push(`text-align:${hAlign}`);
+        styles.push(`text-align:${hAlign} !important`);
         const vAlign = cell.val || 'middle';
-        styles.push(`vertical-align:${vAlign === 'center' ? 'middle' : vAlign}`);
+        styles.push(`vertical-align:${vAlign === 'center' ? 'middle' : vAlign} !important`);
 
         const isNumberOrPct = /^-?[\d,]+(\.\d+)?%?$/.test(trimmedText);
         const isSingleWordOrShortName =
@@ -779,9 +1329,11 @@
             /^(Green Zone|Yello Zone|Yellow Zone|Red Zone|Complete|Done|Due|AS Due|TS Due|No Target|TOTAL|Total|योग|DEOGARH)$/i.test(trimmedText) ||
             (isDenseSheet && rIdx >= 4 && cell.c <= 2));
 
+        const cellClasses = [szClass];
         if (isSingleWordOrShortName) {
-          attrs.push('class="nowrap-cell"');
+          cellClasses.push('nowrap-cell');
         }
+        attrs.push(`class="${cellClasses.join(' ')}"`);
 
         let innerHtml = '';
         if (cell.cur && rawText !== '') {
@@ -802,6 +1354,7 @@
   }
 
   function renderBlockDashboard() {
+    ensureBlockPrintStyles();
     const container = document.getElementById('block-report-container');
     if (!container || !blockPayload) return;
 
@@ -872,6 +1425,7 @@
   }
 
   async function capturePrintPageToCanvas(page, scale = 2) {
+    ensureBlockPrintStyles();
     const metrics = getPageRenderMetrics(page);
     const wrapper = document.createElement('div');
     wrapper.style.position = 'fixed';
@@ -1182,7 +1736,13 @@
     renderBlockDashboard();
   }
 
+  function printBlockReport() {
+    ensureBlockPrintStyles();
+    window.print();
+  }
+
   root.BlockReport = {
+    printBlockReport,
     BLOCK_REPORT_SHEETS,
     loadBlockReportData,
     initBlockPage,
@@ -1191,7 +1751,7 @@
     exportSingleSheetPDF,
     handleLocalWorkbookUpload
   };
-})(window);
+})(typeof window !== 'undefined' ? window : this);
 
 document.title = 'स्वच्छ भारत मिशन (ग्रामीण) | ब्लॉक समेकित रिपोर्ट (14 Sheets PDF)';
 function startBlockApp() {
@@ -1212,6 +1772,5 @@ if (document.readyState === 'loading') {
 }
 setTimeout(startBlockApp, 100);
 </script>
-
 </body>
 </html>
