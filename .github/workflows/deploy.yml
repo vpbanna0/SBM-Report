@@ -28,9 +28,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Normalize uploaded filenames (if uploaded from mobile)
+      - name: Auto-clean markdown code fences and normalize filenames
         continue-on-error: true
         run: |
+          node -e '
+            const fs = require("fs");
+            for (const dir of ["public", "scripts"]) {
+              if (!fs.existsSync(dir)) continue;
+              for (const f of fs.readdirSync(dir)) {
+                if (!/\.(js|html|css)$/.test(f)) continue;
+                const p = dir + "/" + f;
+                let txt = fs.readFileSync(p, "utf8");
+                if (txt.startsWith("```")) {
+                  txt = txt.replace(/^```[a-zA-Z]*\r?\n/, "").replace(/\r?\n```\s*$/, "");
+                  fs.writeFileSync(p, txt, "utf8");
+                  console.log("Stripped markdown fence from", p);
+                }
+              }
+            }
+          ' || true
+          if [ -f public/data-handler-restore.js ]; then cp -f public/data-handler-restore.js public/data-handler.js; rm -f public/data-handler-restore.js; fi
+          if [ -f public/block-report-restore.js ]; then cp -f public/block-report-restore.js public/block-report.js; rm -f public/block-report-restore.js; fi
+          if [ -f public/block-clean.html ]; then cp -f public/block-clean.html public/block.html; rm -f public/block-clean.html; fi
           if [ -f public/block-fix.html ]; then cp -f public/block-fix.html public/block.html; rm -f public/block-fix.html; fi
           if [ -f public/block-print.html ]; then cp -f public/block-print.html public/block.html; rm -f public/block-print.html; fi
           if [ -f public/block-report-fix.js ]; then cp -f public/block-report-fix.js public/block-report.js; rm -f public/block-report-fix.js; fi
