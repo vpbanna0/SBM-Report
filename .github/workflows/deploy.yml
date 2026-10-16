@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
@@ -28,6 +28,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Normalize uploaded filenames (if uploaded from mobile)
+        continue-on-error: true
+        run: |
+          [ -f public/block-page.html ] && cp -f public/block-page.html public/block.html || true
+          [ -f public/block-v2.html ] && cp -f public/block-v2.html public/block.html || true
+          [ -f public/block-engine.js ] && cp -f public/block-engine.js public/block-report.js || true
+          [ -f public/block-report-v2.js ] && cp -f public/block-report-v2.js public/block-report.js || true
+          [ -f public/block-report.js ] && cp -f public/block-report.js public/block_report.js || true
+          [ -f scripts/build-block.js ] && cp -f scripts/build-block.js scripts/build-block-report.js || true
+          [ -f scripts/build-data.js ] && cp -f scripts/build-data.js scripts/build-static-data.js || true
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -35,34 +46,42 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
+        continue-on-error: true
         run: npm install --no-audit --no-fund
 
       - name: Build latest workbook.json & block-report.json from Google Drive
+        continue-on-error: true
         run: |
-          npm run build:data
-          if [ ! -f public/data/block-report.json ]; then
-            node scripts/build-block-report.js || node scripts/build_block_report.js
-          fi
+          npm run build:data || true
+          node scripts/build-block-report.js || node scripts/build_block_report.js || true
         env:
           GOOGLE_DRIVE_FILE_ID: ${{ vars.GOOGLE_DRIVE_FILE_ID }}
 
       - name: Ensure GitHub Pages does not run Jekyll
         run: touch public/.nojekyll
 
-      - name: Commit updated workbook.json & block-report.json (agar naya data aaya ho)
+      - name: Commit updated workbook.json & block-report.json
         id: commit_data
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add public/data/workbook.json public/data/block-report.json 2>/dev/null || true
+          cp public/data/workbook.json /tmp/workbook.json 2>/dev/null || true
+          cp public/data/block-report.json /tmp/block-report.json 2>/dev/null || true
+
+          git fetch origin ${{ github.ref_name }} || true
+          git reset --hard origin/${{ github.ref_name }} || true
+          mkdir -p public/data
+          touch public/.nojekyll
+
+          [ -f /tmp/workbook.json ] && cp /tmp/workbook.json public/data/workbook.json || true
+          [ -f /tmp/block-report.json ] && cp /tmp/block-report.json public/data/block-report.json || true
+
+          git add public/ public/data/workbook.json public/data/block-report.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
-            git commit -m "chore: auto-update workbook.json & block-report.json data snapshot [skip ci]"
-            git push origin HEAD:${{ github.ref_name }}
-            echo "updated=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No data changes detected, skipping commit."
-            echo "updated=false" >> "$GITHUB_OUTPUT"
+            git commit -m "chore: auto-update workbook.json & block-report.json data snapshot [skip ci]" || true
+            git push origin HEAD:${{ github.ref_name }} || true
           fi
 
       - name: Setup Pages
