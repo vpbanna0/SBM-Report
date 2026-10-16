@@ -31,13 +31,14 @@ jobs:
       - name: Normalize uploaded filenames (if uploaded from mobile)
         continue-on-error: true
         run: |
-          [ -f public/block-page.html ] && cp -f public/block-page.html public/block.html || true
-          [ -f public/block-v2.html ] && cp -f public/block-v2.html public/block.html || true
-          [ -f public/block-engine.js ] && cp -f public/block-engine.js public/block-report.js || true
-          [ -f public/block-report-v2.js ] && cp -f public/block-report-v2.js public/block-report.js || true
+          if [ -f public/block-fix.html ]; then cp -f public/block-fix.html public/block.html; rm -f public/block-fix.html; fi
+          if [ -f public/block-print.html ]; then cp -f public/block-print.html public/block.html; rm -f public/block-print.html; fi
+          if [ -f public/block-report-fix.js ]; then cp -f public/block-report-fix.js public/block-report.js; rm -f public/block-report-fix.js; fi
+          if [ -f public/block-report-print.js ]; then cp -f public/block-report-print.js public/block-report.js; rm -f public/block-report-print.js; fi
           [ -f public/block-report.js ] && cp -f public/block-report.js public/block_report.js || true
           [ -f scripts/build-block.js ] && cp -f scripts/build-block.js scripts/build-block-report.js || true
           [ -f scripts/build-data.js ] && cp -f scripts/build-data.js scripts/build-static-data.js || true
+          rm -f public/block-page.html public/block-v2.html public/block-engine.js public/block-report-v2.js 2>/dev/null || true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
