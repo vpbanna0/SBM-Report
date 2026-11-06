@@ -182,11 +182,6 @@
       break-inside: avoid-page !important;
       page-break-after: always !important;
       break-after: page !important;
-      /* Excel-style fit: use the available page height. */
-      height: 96vh !important;
-      min-height: 96vh !important;
-      display: flex !important;
-      align-items: stretch !important;
     }
     .excel-page-card.portrait {
       page: block-portrait !important;
@@ -202,15 +197,11 @@
     }
     .excel-print-page {
       width: 100% !important;
-      height: 100% !important;
       margin: 0 auto !important;
       overflow: visible !important;
-      display: flex !important;
-      flex-direction: column !important;
     }
     .excel-sheet-tbl {
       width: 100% !important;
-      height: 100% !important;
       margin: 0 auto !important;
       border-collapse: collapse !important;
       border: none !important;
@@ -1522,12 +1513,13 @@
         const availW = Math.min(pageWidth - marginX * 2, metrics.maxPdfWidthMm || pageWidth - marginX * 2);
         const availH = pageHeight - marginY * 2;
 
-        // Fill printable A4, like Excel's "Fit sheet on one page".
-        const renderW = availW;
-        const renderH = availH;
+        // Fit within the printable A4 area while preserving the sheet's proportions.
+        const fitScale = Math.min(availW / canvas.width, availH / canvas.height);
+        const renderW = canvas.width * fitScale;
+        const renderH = canvas.height * fitScale;
 
         const xOffset = (pageWidth - renderW) / 2;
-        const yOffset = marginY;
+        const yOffset = (pageHeight - renderH) / 2;
 
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
         doc.addImage(imgData, 'JPEG', xOffset, yOffset, renderW, renderH, undefined, 'FAST');
