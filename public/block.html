@@ -182,6 +182,11 @@
       break-inside: avoid-page !important;
       page-break-after: always !important;
       break-after: page !important;
+      /* Excel-style fit: use the available page height. */
+      height: 96vh !important;
+      min-height: 96vh !important;
+      display: flex !important;
+      align-items: stretch !important;
     }
     .excel-page-card.portrait {
       page: block-portrait !important;
@@ -197,11 +202,15 @@
     }
     .excel-print-page {
       width: 100% !important;
+      height: 100% !important;
       margin: 0 auto !important;
       overflow: visible !important;
+      display: flex !important;
+      flex-direction: column !important;
     }
     .excel-sheet-tbl {
       width: 100% !important;
+      height: 100% !important;
       margin: 0 auto !important;
       border-collapse: collapse !important;
       border: none !important;
@@ -1513,12 +1522,9 @@
         const availW = Math.min(pageWidth - marginX * 2, metrics.maxPdfWidthMm || pageWidth - marginX * 2);
         const availH = pageHeight - marginY * 2;
 
-        let renderW = availW;
-        let renderH = (canvas.height * renderW) / canvas.width;
-        if (renderH > availH) {
-          renderH = availH;
-          renderW = (canvas.width * renderH) / canvas.height;
-        }
+        // Fill printable A4, like Excel's "Fit sheet on one page".
+        const renderW = availW;
+        const renderH = availH;
 
         const xOffset = (pageWidth - renderW) / 2;
         const yOffset = marginY;
