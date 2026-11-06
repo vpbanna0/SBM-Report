@@ -77,15 +77,15 @@
     }
     
   @page {
-    size: A4 landscape;
+    size: Letter landscape;
     margin: 6mm 8mm;
   }
   @page block-portrait {
-    size: A4 portrait;
+    size: Letter portrait;
     margin: 8mm 10mm;
   }
   @page block-landscape {
-    size: A4 landscape;
+    size: Letter landscape;
     margin: 6mm 8mm;
   }
 
@@ -676,15 +676,15 @@
     }
     style.textContent = `
   @page {
-    size: A4 landscape;
+    size: Letter landscape;
     margin: 6mm 8mm;
   }
   @page block-portrait {
-    size: A4 portrait;
+    size: Letter portrait;
     margin: 8mm 10mm;
   }
   @page block-landscape {
-    size: A4 landscape;
+    size: Letter landscape;
     margin: 6mm 8mm;
   }
 
@@ -1028,7 +1028,7 @@
 
     if (nameNorm === 'summary') {
       let splitIdx = rows.findIndex((r) =>
-        (r.cells || []).some((c) => String(c.v || '').includes('2025-26') && String(c.v || '').includes('CSC'))
+        (r.cells || []).some((c) => String(c.v || '').includes('2024-25') && String(c.v || '').includes('CSC'))
       );
       if (splitIdx === -1) {
         splitIdx = rows.findIndex((r) => r.r > 34);
@@ -1484,7 +1484,7 @@
       const doc = new jsPDF({
         orientation: firstPage.orientation === 'portrait' ? 'portrait' : 'landscape',
         unit: 'mm',
-        format: 'a4',
+        format: 'letter',
         compress: true
       });
 
@@ -1499,7 +1499,7 @@
         );
 
         if (i > 0) {
-          doc.addPage('a4', page.orientation === 'portrait' ? 'portrait' : 'landscape');
+          doc.addPage('letter', page.orientation === 'portrait' ? 'portrait' : 'landscape');
         }
 
         const canvas = await capturePrintPageToCanvas(page, 2);
