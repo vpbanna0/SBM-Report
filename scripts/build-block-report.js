@@ -428,7 +428,7 @@ function resolveColorNode(nodeXml, themeColors) {
     const idx = parseInt(theme, 10);
     let baseHex = themeColors[idx] || DEFAULT_THEME_COLORS[idx] || 'D9D9D9';
     if (idx === 7 && parseFloat(getAttr(nodeXml, 'tint') || '0') > 0.7) {
-      return '#D9E1F2';
+      return '#E4DFEC';
     }
     const tint = getAttr(nodeXml, 'tint');
     return '#' + applyTintToHex(baseHex, tint);
@@ -653,9 +653,18 @@ function formatCellValue(rawVal, cellType, formulaStr, xf, sheetName, colHeaderT
 
   const fmtCode = (xf && xf.numFmtCode) || 'General';
   const numFmtId = (xf && xf.numFmtId) || 0;
+  const isTodayFormula = formulaStr && /\bTODAY\s*\(\s*\)/i.test(formulaStr);
 
   if (cellType === 's' || cellType === 'str' || cellType === 'inlineStr') {
-    return { text: String(rawVal), isCurrency: false, isNumeric: false };
+    let strText = String(rawVal);
+    if (isTodayFormula) {
+      const d = new Date(Date.now() + 5.5 * 3600 * 1000);
+      const dd = String(d.getUTCDate()).padStart(2, '0');
+      const mmIdx = d.getUTCMonth();
+      const yyyy = d.getUTCFullYear();
+      strText = strText.replace(/\d{2}-[A-Za-z]{3}-\d{4}/g, `${dd}-${MONTHS_SHORT[mmIdx]}-${yyyy}`);
+    }
+    return { text: strText, isCurrency: false, isNumeric: false };
   }
 
   const num = Number(rawVal);
@@ -663,18 +672,20 @@ function formatCellValue(rawVal, cellType, formulaStr, xf, sheetName, colHeaderT
     return { text: String(rawVal), isCurrency: false, isNumeric: false };
   }
 
-  const isTodayFormula = formulaStr && /\bTODAY\s*\(\s*\)/i.test(formulaStr);
   if (isTodayFormula || (num > 35000 && num < 65000 && isDateNumFmt(numFmtId, fmtCode))) {
     const d = isTodayFormula ? new Date(Date.now() + 5.5 * 3600 * 1000) : (num > 35000 ? excelSerialToDate(num) : new Date());
     const dd = String(d.getUTCDate()).padStart(2, '0');
     const mmIdx = d.getUTCMonth();
     const yyyy = d.getUTCFullYear();
     const cleanFmt = String(fmtCode).toLowerCase();
-    if (cleanFmt.includes('mmm') && !cleanFmt.includes('mmmm') && cleanFmt.includes('-')) {
+    const sNorm = String(sheetName || '').toLowerCase();
+    if (
+      sNorm.includes('ihhl data combine') ||
+      (cleanFmt.includes('mmm') && !cleanFmt.includes('mmmm') && cleanFmt.includes('-')) ||
+      cleanFmt.includes('mm-yyyy') ||
+      cleanFmt.includes('mm/yyyy')
+    ) {
       return { text: `${dd}-${MONTHS_SHORT[mmIdx]}-${yyyy}`, isCurrency: false, isNumeric: false };
-    }
-    if (cleanFmt.includes('mm-yyyy') || cleanFmt.includes('mm/yyyy')) {
-      return { text: `${dd}-${String(mmIdx + 1).padStart(2, '0')}-${yyyy}`, isCurrency: false, isNumeric: false };
     }
     return { text: `${dd} ${MONTHS_FULL[mmIdx]} ${yyyy}`, isCurrency: false, isNumeric: false };
   }
@@ -1040,7 +1051,7 @@ function parseWorksheetFull(sheetMeta, sheetXml, sharedStrings, styles) {
     }
 
     if (t === 'Pending At JTA') {
-      bg = bg || '#E2C6D8';
+      bg = bg || '#E5B8B7';
     } else if (t === 'AS Due at VDO') {
       bg = bg || '#FF0000';
       color = '#FFFFFF';
@@ -1064,6 +1075,12 @@ function parseWorksheetFull(sheetMeta, sheetXml, sharedStrings, styles) {
       width: colWidths[c] !== undefined ? colWidths[c] : 11
     });
   }
+
+  const sNameLower = sheetMeta.name.trim().toLowerCase();
+  const isRightNumSheet =
+    sNameLower.startsWith('csc ') ||
+    sNameLower.includes('target aip') ||
+    sNameLower.includes('financial');
 
   const rows = [];
   for (let r = rStart; r <= rEnd; r++) {
@@ -1089,15 +1106,20 @@ function parseWorksheetFull(sheetMeta, sheetXml, sharedStrings, styles) {
       }
 
       const cfStyle = getConditionalStyle(r, c, text, cell?.isNumeric, cell?.rawNum);
-      const bg = cfStyle.bg || xf.fill?.bg || null;
+      let bg = cfStyle.bg || xf.fill?.bg || null;
+      if (sNameLower === 'summary' && bg === '#D9E1F2') {
+        bg = '#E4DFEC';
+      }
       const color = cfStyle.color || xf.font?.color || '#000000';
 
       let hAlign = xf.align?.h || null;
       if (hAlign === 'centerContinuous') hAlign = 'center';
       if (!hAlign) {
         if (cell?.isCurrency) hAlign = 'right';
-        else if (cell?.isNumeric) hAlign = 'center';
+        else if (cell?.isNumeric) hAlign = isRightNumSheet ? 'right' : 'center';
         else hAlign = 'left';
+      } else if (isRightNumSheet && r >= 3 && cell?.isNumeric && !cell?.isCurrency && colspan === 1) {
+        hAlign = 'right';
       }
 
       const cellData = { c, v: text };
@@ -1109,7 +1131,7 @@ function parseWorksheetFull(sheetMeta, sheetXml, sharedStrings, styles) {
       if (xf.font?.strike) cellData.st = 1;
       if (xf.font?.sz && xf.font.sz !== 11) cellData.sz = xf.font.sz;
       if (bg) cellData.bg = bg;
-      if (color && color !== '#000000') cellData.fg = color;
+      if (color && color.toUpperCase() === '#FFFFFF') cellData.fg = '#FFFFFF';
       if (hAlign && hAlign !== 'left') cellData.al = hAlign;
       if (xf.align?.v && xf.align.v !== 'center') cellData.val = xf.align.v;
       if (xf.align?.wrap) cellData.w = 1;
@@ -1123,6 +1145,16 @@ function parseWorksheetFull(sheetMeta, sheetXml, sharedStrings, styles) {
       }
 
       rowCells.push(cellData);
+    }
+
+    // Normalize interior grid rows so every cell in a bordered table row has full 4-sided borders
+    const gridCellCount = rowCells.filter(
+      (rc) => (rc.bd && rc.bd[0] + rc.bd[1] + rc.bd[2] + rc.bd[3] >= 2) || rc.bg
+    ).length;
+    if (gridCellCount >= 2) {
+      for (const rc of rowCells) {
+        rc.bd = [1, 1, 1, 1];
+      }
     }
 
     rows.push({
